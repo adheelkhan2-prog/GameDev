@@ -355,6 +355,7 @@ export abstract class GameScene extends Phaser.Scene {
   }
 
   private setupCamera() {
+    this.physics.world.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.setZoom(1);
     this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
