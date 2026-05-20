@@ -1,0 +1,48 @@
+export const PLAYER_SPEED = 220;
+export const PLAYER_JUMP_VELOCITY = -520;
+export const PLAYER_MAX_HEALTH = 3;
+export const PLAYER_INVINCIBILITY_TIME = 1200;
+
+export const TIME_SLOW_DURATION = 5000;
+export const TIME_SLOW_COOLDOWN = 3000;
+export const TIME_SLOW_SCALE = 0.2;
+
+export const TIME_REWIND_DURATION = 2000;
+export const TIME_REWIND_COOLDOWN = 4000;
+export const TIME_REWIND_HISTORY = 120;
+
+export const CRYSTALS_PER_LEVEL = 5;
+
+export const DRONE_SPEED = 80;
+export const PHASE_SHIFTER_TELEPORT_INTERVAL = 2500;
+export const PULSAR_FIRE_INTERVAL = 2000;
+export const PROJECTILE_SPEED = 280;
+
+export const COLLAPSE_DELAY = 3000;
+export const COLLAPSE_RESPAWN = 5000;
+
+export const COLORS = {
+  PLAYER: 0x00ffff,
+  PLAYER_GLOW: 0x0088ff,
+  PLATFORM: 0x1a5c3a,
+  PLATFORM_LIGHT: 0x228b52,
+  GROUND: 0x0d3d26,
+  CRYSTAL: 0xffd700,
+  CRYSTAL_GLOW: 0xffaa00,
+  SHARD: 0x8866ff,
+  HEALTH_PICKUP: 0xff4466,
+  DRONE: 0xcc2200,
+  PHASE_SHIFTER: 0xff6600,
+  PULSAR: 0xff3300,
+  PROJECTILE: 0xff8800,
+  SPIKE: 0x444455,
+  EXIT: 0xff00ff,
+  EXIT_GLOW: 0xaa00ff,
+  BG: 0x000f1f,
+  BG2: 0x001a33,
+  TIME_SLOW_TINT: 0x4444ff,
+  COLLAPSE_PLATFORM: 0x7a4a1a,
+  UI_TEXT: 0xffffff,
+  UI_BG: 0x000000,
+  STAR: 0x334455,
+};
