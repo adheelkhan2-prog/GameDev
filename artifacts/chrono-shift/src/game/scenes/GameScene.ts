@@ -104,6 +104,20 @@ export abstract class GameScene extends Phaser.Scene {
     this.setupCamera();
 
     this.uiManager = new UIManager(this, this.timeManager, this.levelNumber);
+
+    // Build crystal position list (in-order) for the mini-map
+    const crystalDefs = this.buildCollectibles()
+      .filter((d) => d.type === "crystal")
+      .map((d) => ({ x: d.x, y: d.y }));
+
+    this.uiManager.initMiniMap({
+      worldWidth: this.worldWidth,
+      worldHeight: this.worldHeight,
+      crystals: crystalDefs,
+      exitX: this.exitX,
+      exitY: this.exitY,
+      platforms: this.buildPlatforms().map((p) => ({ x: p.x, y: p.y, w: p.w, h: p.h })),
+    });
   }
 
   private createBackground() {
@@ -237,8 +251,12 @@ export abstract class GameScene extends Phaser.Scene {
   private createCollectibles() {
     this.crystals = this.physics.add.staticGroup();
     const defs = this.buildCollectibles();
+    let crystalIdx = 0;
     for (const def of defs) {
       const c = new Collectible(this, def.x, def.y, def.type);
+      if (def.type === "crystal") {
+        (c as Collectible & { crystalIndex: number }).crystalIndex = crystalIdx++;
+      }
       this.collectibles.push(c);
       if (def.type === "crystal") {
         this.crystals.add(c);
@@ -412,6 +430,8 @@ export abstract class GameScene extends Phaser.Scene {
       const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, c.x, c.y);
       if (dist < 30) {
         if (c.collectibleType === "crystal") {
+          const idx = (c as Collectible & { crystalIndex?: number }).crystalIndex ?? -1;
+          this.uiManager?.markCrystalCollected(idx);
           this.crystalsCollected++;
           this.player.addScore(100);
           if (this.crystalsCollected >= this.totalCrystals) {
@@ -442,7 +462,9 @@ export abstract class GameScene extends Phaser.Scene {
       this.player.score,
       this.player.health,
       this.crystalsCollected,
-      this.totalCrystals
+      this.totalCrystals,
+      this.player.x,
+      this.player.y
     );
   }
 
