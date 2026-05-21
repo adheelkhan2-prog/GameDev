@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { getScores, clearScores, formatTime, type LeaderboardEntry } from "../utils/leaderboard";
+import { getSettings, saveSettings } from "../utils/settings";
+import { soundManager } from "../managers/SoundManager";
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -9,6 +11,11 @@ export class MenuScene extends Phaser.Scene {
   create() {
     const W = this.scale.width;
     const H = this.scale.height;
+
+    // Apply persisted settings
+    const saved = getSettings();
+    soundManager.volume = saved.volume;
+    soundManager.enabled = saved.soundEnabled;
 
     // Background gradient effect
     this.add.rectangle(W / 2, H / 2, W, H, 0x000f1f);
@@ -91,20 +98,24 @@ export class MenuScene extends Phaser.Scene {
     this.createPlayerPreview(W / 2, 290);
 
     // Buttons
-    this.createButton(W / 2, 390, "▶  PLAY GAME", "#00ff88", () => {
+    this.createButton(W / 2, 375, "▶  PLAY GAME", "#00ff88", () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(300, () => this.scene.start("Level1Scene"));
     });
 
-    this.createButton(W / 2, 450, "★  HIGH SCORES", "#ffd700", () => {
+    this.createButton(W / 2, 432, "★  HIGH SCORES", "#ffd700", () => {
       this.showLeaderboard();
     });
 
-    this.createButton(W / 2, 515, "?  HOW TO PLAY", "#44aaff", () => {
+    this.createButton(W / 2, 489, "⚙  SETTINGS", "#cc88ff", () => {
+      this.showSettings();
+    });
+
+    this.createButton(W / 2, 546, "?  HOW TO PLAY", "#44aaff", () => {
       this.showInstructions();
     });
 
-    this.createButton(W / 2, 580, "✦  CREDITS", "#ffaa44", () => {
+    this.createButton(W / 2, 603, "✦  CREDITS", "#ffaa44", () => {
       this.showCredits();
     });
 
@@ -208,6 +219,235 @@ export class MenuScene extends Phaser.Scene {
 
     text.on("pointerdown", cb);
     return text;
+  }
+
+  private showSettings() {
+    const W = this.scale.width;
+    const H = this.scale.height;
+
+    const panelW = 540;
+    const panelH = 370;
+    const px = W / 2 - panelW / 2;
+    const py = H / 2 - panelH / 2;
+
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.88)
+      .setDepth(50).setInteractive();
+
+    const panel = this.add.graphics().setDepth(51);
+    const drawPanel = () => {
+      panel.clear();
+      panel.fillStyle(0x0a0a1e, 0.98);
+      panel.fillRoundedRect(px, py, panelW, panelH, 16);
+      panel.lineStyle(2, 0xcc88ff, 0.7);
+      panel.strokeRoundedRect(px, py, panelW, panelH, 16);
+    };
+    drawPanel();
+
+    const allObjs: Phaser.GameObjects.GameObject[] = [overlay, panel];
+    const closeAll = () => allObjs.forEach((o) => { if (o.active) o.destroy(); });
+
+    const addText = (x: number, y: number, txt: string, style: Phaser.Types.GameObjects.Text.TextStyle) => {
+      const t = this.add.text(x, y, txt, style).setDepth(52);
+      allObjs.push(t);
+      return t;
+    };
+
+    // Title
+    addText(W / 2, py + 34, "⚙  SETTINGS", {
+      fontSize: "28px", fontFamily: "monospace", color: "#cc88ff",
+      stroke: "#330066", strokeThickness: 3,
+      shadow: { offsetX: 0, offsetY: 0, color: "#9944ff", blur: 10, fill: true },
+    }).setOrigin(0.5);
+
+    // ✕ Close (top-right)
+    const xBg = this.add.graphics().setDepth(52);
+    xBg.fillStyle(0x220033, 0.85);
+    xBg.fillRoundedRect(px + panelW - 46, py + 10, 36, 30, 6);
+    allObjs.push(xBg);
+    const xBtn = addText(px + panelW - 28, py + 25, "✕", {
+      fontSize: "20px", fontFamily: "monospace", color: "#885599",
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    xBtn.on("pointerover", () => xBtn.setColor("#ff88ff"));
+    xBtn.on("pointerout",  () => xBtn.setColor("#885599"));
+    xBtn.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => { e.stopPropagation(); closeAll(); });
+
+    // ── VOLUME ──────────────────────────────────────────────────────────
+    addText(px + 32, py + 90, "VOLUME", {
+      fontSize: "16px", fontFamily: "monospace", color: "#aaaacc",
+    });
+
+    const trackX = px + 140;
+    const trackY = py + 97;
+    const trackW = 240;
+    const trackH = 14;
+
+    // Redraw volume bar and percentage label
+    const volBarBg = this.add.graphics().setDepth(52);
+    const volBarFill = this.add.graphics().setDepth(53);
+    allObjs.push(volBarBg, volBarFill);
+
+    const pctLabel = addText(trackX + trackW + 18, trackY + trackH / 2, "38%", {
+      fontSize: "14px", fontFamily: "monospace", color: "#cc88ff",
+    }).setOrigin(0, 0.5);
+
+    const redrawVolume = () => {
+      const v = soundManager.volume;
+      pctLabel.setText(`${Math.round(v * 100)}%`);
+      volBarBg.clear();
+      volBarBg.fillStyle(0x221133, 1);
+      volBarBg.fillRoundedRect(trackX, trackY, trackW, trackH, 4);
+      volBarFill.clear();
+      if (v > 0) {
+        volBarFill.fillStyle(0xcc88ff, 1);
+        volBarFill.fillRoundedRect(trackX, trackY, Math.max(trackH, trackW * v), trackH, 4);
+      }
+    };
+    redrawVolume();
+
+    // Clickable track
+    const trackHit = this.add.rectangle(trackX + trackW / 2, trackY + trackH / 2, trackW, 28, 0xffffff, 0)
+      .setDepth(54).setInteractive({ useHandCursor: true });
+    allObjs.push(trackHit);
+    trackHit.on("pointerdown", (ptr: Phaser.Input.Pointer, _lx: unknown, _ly: unknown, e: Event) => {
+      e.stopPropagation();
+      const ratio = Phaser.Math.Clamp((ptr.x - trackX) / trackW, 0, 1);
+      soundManager.volume = ratio;
+      soundManager.enabled = ratio > 0 ? true : soundManager.enabled;
+      saveSettings({ volume: soundManager.volume, soundEnabled: soundManager.enabled });
+      redrawVolume();
+      refreshToggle();
+    });
+
+    // [−] button
+    const makeSmallBtn = (label: string, bx: number, by: number, cb: () => void) => {
+      const bg = this.add.graphics().setDepth(52);
+      bg.fillStyle(0x221133, 0.9);
+      bg.fillRoundedRect(bx - 18, by - 14, 36, 28, 6);
+      bg.lineStyle(1, 0x9944cc, 0.6);
+      bg.strokeRoundedRect(bx - 18, by - 14, 36, 28, 6);
+      allObjs.push(bg);
+      const t = addText(bx, by, label, { fontSize: "18px", fontFamily: "monospace", color: "#cc88ff" })
+        .setOrigin(0.5).setInteractive({ useHandCursor: true });
+      t.on("pointerover", () => t.setColor("#ffffff"));
+      t.on("pointerout",  () => t.setColor("#cc88ff"));
+      t.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
+        e.stopPropagation();
+        cb();
+        saveSettings({ volume: soundManager.volume, soundEnabled: soundManager.enabled });
+        redrawVolume();
+        refreshToggle();
+      });
+    };
+
+    makeSmallBtn("−", trackX - 26, trackY + trackH / 2, () => {
+      soundManager.volume = Math.max(0, Math.round((soundManager.volume - 0.1) * 10) / 10);
+    });
+    makeSmallBtn("+", trackX + trackW + 70, trackY + trackH / 2, () => {
+      soundManager.volume = Math.min(1, Math.round((soundManager.volume + 0.1) * 10) / 10);
+      soundManager.enabled = true;
+    });
+
+    // ── SOUND TOGGLE ─────────────────────────────────────────────────
+    addText(px + 32, py + 155, "SOUND", {
+      fontSize: "16px", fontFamily: "monospace", color: "#aaaacc",
+    });
+
+    const toggleBg = this.add.graphics().setDepth(52);
+    allObjs.push(toggleBg);
+    const toggleLabel = addText(px + 200, py + 163, "", {
+      fontSize: "15px", fontFamily: "monospace", color: "#00ff88",
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    const refreshToggle = () => {
+      const on = soundManager.enabled;
+      toggleBg.clear();
+      toggleBg.fillStyle(on ? 0x003311 : 0x220011, 0.9);
+      toggleBg.fillRoundedRect(px + 140, py + 150, 120, 28, 8);
+      toggleBg.lineStyle(2, on ? 0x00ff88 : 0xff4455, 0.8);
+      toggleBg.strokeRoundedRect(px + 140, py + 150, 120, 28, 8);
+      toggleLabel.setText(on ? "✓  ON" : "✕  OFF");
+      toggleLabel.setColor(on ? "#00ff88" : "#ff4455");
+    };
+    refreshToggle();
+
+    toggleLabel.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
+      e.stopPropagation();
+      soundManager.enabled = !soundManager.enabled;
+      saveSettings({ volume: soundManager.volume, soundEnabled: soundManager.enabled });
+      refreshToggle();
+    });
+    toggleLabel.on("pointerover", () => toggleLabel.setScale(1.06));
+    toggleLabel.on("pointerout",  () => toggleLabel.setScale(1));
+
+    // ── FULLSCREEN ───────────────────────────────────────────────────
+    addText(px + 32, py + 218, "FULLSCREEN", {
+      fontSize: "16px", fontFamily: "monospace", color: "#aaaacc",
+    });
+
+    const fsBg = this.add.graphics().setDepth(52);
+    allObjs.push(fsBg);
+    const fsLabel = addText(px + 210, py + 226, "", {
+      fontSize: "15px", fontFamily: "monospace", color: "#44aaff",
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    const refreshFs = () => {
+      const full = this.scale.isFullscreen;
+      fsBg.clear();
+      fsBg.fillStyle(0x001122, 0.9);
+      fsBg.fillRoundedRect(px + 140, py + 213, 140, 28, 8);
+      fsBg.lineStyle(2, 0x44aaff, 0.7);
+      fsBg.strokeRoundedRect(px + 140, py + 213, 140, 28, 8);
+      fsLabel.setText(full ? "⤓  EXIT FULL" : "⤢  ENTER FULL");
+      fsLabel.setColor(full ? "#aaccff" : "#44aaff");
+    };
+    refreshFs();
+
+    fsLabel.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
+      e.stopPropagation();
+      if (this.scale.isFullscreen) {
+        this.scale.stopFullscreen();
+      } else {
+        this.scale.startFullscreen();
+      }
+      this.time.delayedCall(120, refreshFs);
+    });
+    fsLabel.on("pointerover", () => fsLabel.setScale(1.06));
+    fsLabel.on("pointerout",  () => fsLabel.setScale(1));
+
+    this.scale.on("enterfullscreen",  refreshFs);
+    this.scale.on("leavefullscreen",  refreshFs);
+
+    // ── Divider lines ─────────────────────────────────────────────────
+    const divG = this.add.graphics().setDepth(52);
+    divG.lineStyle(1, 0xcc88ff, 0.18);
+    divG.lineBetween(px + 20, py + 135, px + panelW - 20, py + 135);
+    divG.lineBetween(px + 20, py + 198, px + panelW - 20, py + 198);
+    divG.lineBetween(px + 20, py + 260, px + panelW - 20, py + 260);
+    allObjs.push(divG);
+
+    // ── CLOSE button ─────────────────────────────────────────────────
+    const bottomY = py + panelH - 34;
+    const closeBtnBg = this.add.graphics().setDepth(52);
+    closeBtnBg.fillStyle(0x110022, 0.85);
+    closeBtnBg.fillRoundedRect(W / 2 - 70, bottomY - 14, 140, 28, 8);
+    closeBtnBg.lineStyle(1, 0xcc88ff, 0.5);
+    closeBtnBg.strokeRoundedRect(W / 2 - 70, bottomY - 14, 140, 28, 8);
+    allObjs.push(closeBtnBg);
+    const closeTxt = addText(W / 2, bottomY, "[ CLOSE ]", {
+      fontSize: "14px", fontFamily: "monospace", color: "#cc88ff",
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    closeTxt.on("pointerover", () => closeTxt.setColor("#ffffff"));
+    closeTxt.on("pointerout",  () => closeTxt.setColor("#cc88ff"));
+    closeTxt.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
+      e.stopPropagation();
+      closeAll();
+    });
+
+    // Overlay closes only outside panel
+    overlay.on("pointerdown", (ptr: Phaser.Input.Pointer) => {
+      const inside = ptr.x >= px && ptr.x <= px + panelW && ptr.y >= py && ptr.y <= py + panelH;
+      if (!inside) closeAll();
+    });
   }
 
   private showLeaderboard() {
