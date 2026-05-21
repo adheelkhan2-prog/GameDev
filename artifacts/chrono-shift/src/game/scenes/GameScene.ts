@@ -67,6 +67,7 @@ export abstract class GameScene extends Phaser.Scene {
   protected paused = false;
 
   private pauseContainer!: Phaser.GameObjects.Container;
+  private pauseInfoText!: Phaser.GameObjects.Text;
   private keyEsc!: Phaser.Input.Keyboard.Key;
 
   protected abstract levelNumber: number;
@@ -440,13 +441,13 @@ export abstract class GameScene extends Phaser.Scene {
     div.lineBetween(cx - 150, cy - 108, cx + 150, cy - 108);
     this.pauseContainer.add(div);
 
-    // Level & score info
-    const infoText = this.add.text(cx, cy - 80, `LEVEL ${this.levelNumber}`, {
+    // Level & score info (updated dynamically when pause opens)
+    this.pauseInfoText = this.add.text(cx, cy - 80, `LEVEL ${this.levelNumber}`, {
       fontSize: "16px",
       fontFamily: "monospace",
       color: "#446677",
     }).setOrigin(0.5);
-    this.pauseContainer.add(infoText);
+    this.pauseContainer.add(this.pauseInfoText);
 
     // Buttons
     const btnDefs = [
@@ -505,27 +506,36 @@ export abstract class GameScene extends Phaser.Scene {
   private togglePause() {
     if (this.gameOver || this.levelComplete) return;
 
-    this.paused = !this.paused;
-
-    if (this.paused) {
-      soundManager.pauseOpen();
+    if (!this.paused) {
+      // ── Pausing ──
+      this.paused = true;
       this.physics.pause();
       this.tweens.pauseAll();
+      this.uiManager?.pauseTimer();
+
+      // Update info text with current score
+      const score = this.player?.score ?? 0;
+      this.pauseInfoText.setText(`LEVEL ${this.levelNumber}  •  SCORE: ${score}`);
+
       this.pauseContainer.setVisible(true);
       this.tweens.add({
         targets: this.pauseContainer,
         alpha: { from: 0, to: 1 },
         duration: 150,
       });
+      soundManager.pauseOpen();
     } else {
+      // ── Resuming ──
       this.tweens.add({
         targets: this.pauseContainer,
         alpha: { from: 1, to: 0 },
         duration: 120,
         onComplete: () => {
           this.pauseContainer.setVisible(false);
+          this.uiManager?.resumeTimer();
           this.physics.resume();
           this.tweens.resumeAll();
+          this.paused = false;
           soundManager.pauseClose();
         },
       });
@@ -534,6 +544,7 @@ export abstract class GameScene extends Phaser.Scene {
 
   private restartLevel() {
     this.paused = false;
+    this.uiManager?.resumeTimer();
     this.physics.resume();
     this.tweens.resumeAll();
     this.cameras.main.fadeOut(250, 0, 0, 0);
@@ -544,6 +555,7 @@ export abstract class GameScene extends Phaser.Scene {
 
   private goToMenu() {
     this.paused = false;
+    this.uiManager?.resumeTimer();
     this.physics.resume();
     this.tweens.resumeAll();
     this.cameras.main.fadeOut(250, 0, 0, 0);

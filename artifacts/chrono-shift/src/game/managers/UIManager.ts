@@ -54,6 +54,8 @@ export class UIManager {
   private exitPulse = 1;
 
   private startTime = 0;
+  private pausedAt = 0;
+  private totalPausedMs = 0;
   private levelNumber = 1;
 
   constructor(scene: Phaser.Scene, timeManager: TimeManager, levelNumber = 1) {
@@ -62,6 +64,17 @@ export class UIManager {
     this.levelNumber = levelNumber;
     this.startTime = scene.time.now;
     this.create();
+  }
+
+  pauseTimer() {
+    this.pausedAt = this.scene.time.now;
+  }
+
+  resumeTimer() {
+    if (this.pausedAt > 0) {
+      this.totalPausedMs += this.scene.time.now - this.pausedAt;
+      this.pausedAt = 0;
+    }
   }
 
   private create() {
@@ -303,7 +316,7 @@ export class UIManager {
   }
 
   update(score: number, health: number, crystals: number, totalCrystals: number, playerX = 0, playerY = 0) {
-    const elapsed = this.scene.time.now - this.startTime;
+    const elapsed = this.scene.time.now - this.startTime - this.totalPausedMs;
     const secs = Math.floor(elapsed / 1000);
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -416,7 +429,7 @@ export class UIManager {
   }
 
   getElapsedTime() {
-    return this.scene.time.now - this.startTime;
+    return this.scene.time.now - this.startTime - this.totalPausedMs;
   }
 
   destroy() {
