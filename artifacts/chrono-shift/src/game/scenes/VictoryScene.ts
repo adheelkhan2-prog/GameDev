@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { saveScore, formatTime } from "../utils/leaderboard";
 
 interface VictoryData {
   score: number;
@@ -93,9 +94,9 @@ export class VictoryScene extends Phaser.Scene {
     // Score
     const score = data?.score ?? 0;
     const timeMs = data?.timeMs ?? 0;
-    const secs = Math.floor(timeMs / 1000);
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
+
+    // Save to leaderboard
+    const { isNewBest, position } = saveScore(score, timeMs);
 
     this.add
       .text(W / 2, H / 2 - 55, "ALL LEVELS COMPLETE!", {
@@ -114,7 +115,7 @@ export class VictoryScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(W / 2, H / 2 + 44, `Total Time: ${m}:${s.toString().padStart(2, "0")}`, {
+      .text(W / 2, H / 2 + 44, `Total Time: ${formatTime(timeMs)}`, {
         fontSize: "24px",
         fontFamily: "monospace",
         color: "#aaccff",
@@ -136,8 +137,39 @@ export class VictoryScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
+    // New best / leaderboard position badge
+    if (isNewBest) {
+      const badge = this.add
+        .text(W / 2, H / 2 + 128, "🏆  NEW BEST SCORE!", {
+          fontSize: "20px",
+          fontFamily: "monospace",
+          color: "#ffd700",
+          stroke: "#553300",
+          strokeThickness: 3,
+          shadow: { offsetX: 0, offsetY: 0, color: "#ffaa00", blur: 14, fill: true },
+        })
+        .setOrigin(0.5);
+      this.tweens.add({
+        targets: badge,
+        scaleX: { from: 1, to: 1.06 },
+        scaleY: { from: 1, to: 1.06 },
+        duration: 600,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    } else {
+      this.add
+        .text(W / 2, H / 2 + 128, `Leaderboard position: #${position}`, {
+          fontSize: "16px",
+          fontFamily: "monospace",
+          color: "#667788",
+        })
+        .setOrigin(0.5);
+    }
+
     // Buttons
-    this.createButton(W / 2, H / 2 + 165, "▶  PLAY AGAIN", "#00ff88", () => {
+    this.createButton(W / 2, H / 2 + 175, "▶  PLAY AGAIN", "#00ff88", () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(300, () => this.scene.start("Level1Scene"));
     });
