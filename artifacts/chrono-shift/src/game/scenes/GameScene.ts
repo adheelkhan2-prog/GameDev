@@ -65,6 +65,7 @@ export abstract class GameScene extends Phaser.Scene {
   protected levelComplete = false;
   protected gameOver = false;
   protected paused = false;
+  protected cumulativeTimeMs = 0;
 
   private pauseContainer!: Phaser.GameObjects.Container;
   private pauseInfoText!: Phaser.GameObjects.Text;
@@ -84,6 +85,10 @@ export abstract class GameScene extends Phaser.Scene {
   protected abstract buildCollectibles(): CollectibleDef[];
   protected abstract buildSpikes(): SpikeDef[];
   protected abstract buildVortexes?(): VortexDef[];
+
+  init(data: { score?: number; cumulativeTimeMs?: number }) {
+    this.cumulativeTimeMs = data?.cumulativeTimeMs ?? 0;
+  }
 
   create() {
     this.levelComplete = false;
@@ -579,6 +584,7 @@ export abstract class GameScene extends Phaser.Scene {
         level: this.levelNumber,
         score: this.player.score,
         timeMs: elapsed,
+        cumulativeTimeMs: this.cumulativeTimeMs + elapsed,
         nextScene: this.nextScene,
         crystals: this.crystalsCollected,
       });

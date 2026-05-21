@@ -4,6 +4,7 @@ interface LevelCompleteData {
   level: number;
   score: number;
   timeMs: number;
+  cumulativeTimeMs: number;
   nextScene: string;
   crystals: number;
 }
@@ -72,14 +73,21 @@ export class LevelCompleteScene extends Phaser.Scene {
     line.lineStyle(2, 0x00ffcc, 0.4);
     line.lineBetween(W / 2 - 280, H / 2 - 120, W / 2 + 280, H / 2 - 120);
 
-    const secs = Math.floor((data?.timeMs ?? 0) / 1000);
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
+    const fmtMs = (ms: number) => {
+      const secs = Math.floor(ms / 1000);
+      const m = Math.floor(secs / 60);
+      const s = secs % 60;
+      return `${m}:${s.toString().padStart(2, "0")}`;
+    };
+
+    const cumMs = data?.cumulativeTimeMs ?? data?.timeMs ?? 0;
+    const isFirstLevel = (data?.level ?? 1) === 1;
 
     const statLines = [
-      { label: "Score",    value: `${data?.score ?? 0}`,          color: "#ffee44" },
-      { label: "Crystals", value: `${data?.crystals ?? 0} / 5`,   color: "#ffd700" },
-      { label: "Time",     value: `${m}:${s.toString().padStart(2, "0")}`, color: "#aaccff" },
+      { label: "Score",      value: `${data?.score ?? 0}`,      color: "#ffee44" },
+      { label: "Crystals",   value: `${data?.crystals ?? 0} / 5`, color: "#ffd700" },
+      { label: "Level Time", value: fmtMs(data?.timeMs ?? 0),   color: "#aaccff" },
+      ...(!isFirstLevel ? [{ label: "Total Time", value: fmtMs(cumMs), color: "#00ffcc" }] : []),
     ];
 
     statLines.forEach((stat, i) => {
@@ -108,9 +116,9 @@ export class LevelCompleteScene extends Phaser.Scene {
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.time.delayedCall(300, () => {
           if (isLastLevel) {
-            this.scene.start("VictoryScene", { score: data?.score, timeMs: data?.timeMs });
+            this.scene.start("VictoryScene", { score: data?.score, timeMs: cumMs });
           } else {
-            this.scene.start(data?.nextScene ?? "Level2Scene", { score: data?.score });
+            this.scene.start(data?.nextScene ?? "Level2Scene", { score: data?.score, cumulativeTimeMs: cumMs });
           }
         });
       }
@@ -142,9 +150,9 @@ export class LevelCompleteScene extends Phaser.Scene {
           this.cameras.main.fadeOut(300, 0, 0, 0);
           this.time.delayedCall(300, () => {
             if (isLastLevel) {
-              this.scene.start("VictoryScene", { score: data?.score, timeMs: data?.timeMs });
+              this.scene.start("VictoryScene", { score: data?.score, timeMs: cumMs });
             } else {
-              this.scene.start(data?.nextScene ?? "Level2Scene", { score: data?.score });
+              this.scene.start(data?.nextScene ?? "Level2Scene", { score: data?.score, cumulativeTimeMs: cumMs });
             }
           });
         }
