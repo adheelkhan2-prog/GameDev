@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { saveScore } from "../utils/leaderboard";
+import { unlockAbility, getSettings, saveSettings } from "../utils/settings";
+import { soundManager } from "../managers/SoundManager";
 
 interface LevelCompleteData {
   level: number;
@@ -8,6 +10,7 @@ interface LevelCompleteData {
   cumulativeTimeMs: number;
   nextScene: string;
   crystals: number;
+  difficulty?: string;
 }
 
 export class LevelCompleteScene extends Phaser.Scene {
@@ -18,6 +21,8 @@ export class LevelCompleteScene extends Phaser.Scene {
   create(data: LevelCompleteData) {
     const W = this.scale.width;
     const H = this.scale.height;
+    const level = data?.level ?? 1;
+    const difficulty = data?.difficulty ?? "normal";
 
     this.add.rectangle(W / 2, H / 2, W, H, 0x000f1f);
 
@@ -31,13 +36,7 @@ export class LevelCompleteScene extends Phaser.Scene {
     const glow = this.add.graphics();
     glow.fillStyle(0x00ffcc, 0.07);
     glow.fillEllipse(W / 2, H / 2, 700, 350);
-    this.tweens.add({
-      targets: glow,
-      alpha: { from: 0.4, to: 1 },
-      duration: 1000,
-      yoyo: true,
-      repeat: -1,
-    });
+    this.tweens.add({ targets: glow, alpha: { from: 0.4, to: 1 }, duration: 1000, yoyo: true, repeat: -1 });
 
     // Particles
     try {
@@ -56,7 +55,7 @@ export class LevelCompleteScene extends Phaser.Scene {
 
     // Title
     const title = this.add
-      .text(W / 2, H / 2 - 190, `LEVEL ${data?.level ?? 1} COMPLETE!`, {
+      .text(W / 2, H / 2 - 200, `LEVEL ${level} COMPLETE!`, {
         fontSize: "60px",
         fontFamily: "monospace",
         color: "#00ffcc",
@@ -69,10 +68,10 @@ export class LevelCompleteScene extends Phaser.Scene {
 
     this.tweens.add({ targets: title, alpha: 1, duration: 600 });
 
-    // Decorative line
+    // Divider
     const line = this.add.graphics();
     line.lineStyle(2, 0x00ffcc, 0.4);
-    line.lineBetween(W / 2 - 280, H / 2 - 120, W / 2 + 280, H / 2 - 120);
+    line.lineBetween(W / 2 - 280, H / 2 - 130, W / 2 + 280, H / 2 - 130);
 
     const fmtMs = (ms: number) => {
       const secs = Math.floor(ms / 1000);
@@ -82,68 +81,70 @@ export class LevelCompleteScene extends Phaser.Scene {
     };
 
     const cumMs = data?.cumulativeTimeMs ?? data?.timeMs ?? 0;
-    const isFirstLevel = (data?.level ?? 1) === 1;
+    const isFirstLevel = level === 1;
+    const isLastLevel = level === 5;
 
     const statLines = [
-      { label: "Score",      value: `${data?.score ?? 0}`,      color: "#ffee44" },
-      { label: "Crystals",   value: `${data?.crystals ?? 0} / 5`, color: "#ffd700" },
-      { label: "Level Time", value: fmtMs(data?.timeMs ?? 0),   color: "#aaccff" },
+      { label: "Score",      value: `${data?.score ?? 0}`,          color: "#ffee44" },
+      { label: "Crystals",   value: `${data?.crystals ?? 0} / 5`,    color: "#ffd700" },
+      { label: "Level Time", value: fmtMs(data?.timeMs ?? 0),        color: "#aaccff" },
       ...(!isFirstLevel ? [{ label: "Total Time", value: fmtMs(cumMs), color: "#00ffcc" }] : []),
     ];
 
     statLines.forEach((stat, i) => {
-      const y = H / 2 - 70 + i * 56;
+      const y = H / 2 - 85 + i * 52;
       this.add.text(W / 2 - 160, y, stat.label, {
-        fontSize: "22px",
-        fontFamily: "monospace",
-        color: "#667788",
+        fontSize: "22px", fontFamily: "monospace", color: "#667788",
       }).setOrigin(0, 0.5);
-
       this.add.text(W / 2 + 160, y, stat.value, {
-        fontSize: "22px",
-        fontFamily: "monospace",
-        color: stat.color,
+        fontSize: "22px", fontFamily: "monospace", color: stat.color,
       }).setOrigin(1, 0.5);
     });
 
-    const isLastLevel = data?.level === 3;
+    // Ability unlock logic
+    const newAbility = this.checkAbilityUnlock(level);
 
-    // Save score after every level so partial runs appear on the leaderboard
-    saveScore(data?.score ?? 0, cumMs, data?.level ?? 1);
+    saveScore(data?.score ?? 0, cumMs, level);
+
+    // Buttons
+    const btnY = H / 2 + (newAbility ? 140 : 110);
 
     this.createButton(
       W / 2,
-      H / 2 + 120,
-      isLastLevel ? "★  FINAL VICTORY" : `▶  LEVEL ${(data?.level ?? 1) + 1}`,
-      "#00ff88",
+      btnY,
+      isLastLevel ? "▶  BOSS BATTLE!" : `▶  LEVEL ${level + 1}`,
+      isLastLevel ? "#ff8800" : "#00ff88",
       () => {
         this.cameras.main.fadeOut(300, 0, 0, 0);
         this.time.delayedCall(300, () => {
-          if (isLastLevel) {
-            this.scene.start("VictoryScene", { score: data?.score, timeMs: cumMs });
-          } else {
-            this.scene.start(data?.nextScene ?? "Level2Scene", { score: data?.score, cumulativeTimeMs: cumMs });
-          }
+          this.scene.start(data?.nextScene ?? "Level2Scene", {
+            score: data?.score,
+            cumulativeTimeMs: cumMs,
+            difficulty,
+          });
         });
       }
     );
 
-    this.createButton(W / 2, H / 2 + 195, "⌂  MAIN MENU", "#aaaaff", () => {
+    this.createButton(W / 2, btnY + 66, "⌂  MAIN MENU", "#aaaaff", () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(300, () => this.scene.start("MenuScene"));
     });
 
-    // Auto-countdown (10 seconds)
+    // Ability unlock banner
+    if (newAbility) {
+      this.showAbilityUnlock(W, H, newAbility);
+    }
+
+    // Auto-countdown
     const countdownText = this.add
-      .text(W / 2, H / 2 + 270, "Auto-continuing in 10...", {
-        fontSize: "14px",
-        fontFamily: "monospace",
-        color: "#334455",
+      .text(W / 2, btnY + 136, "Auto-continuing in 10...", {
+        fontSize: "14px", fontFamily: "monospace", color: "#334455",
       })
       .setOrigin(0.5);
 
     let countdown = 10;
-    const timer = this.time.addEvent({
+    this.time.addEvent({
       delay: 1000,
       repeat: 9,
       callback: () => {
@@ -153,17 +154,71 @@ export class LevelCompleteScene extends Phaser.Scene {
         } else {
           this.cameras.main.fadeOut(300, 0, 0, 0);
           this.time.delayedCall(300, () => {
-            if (isLastLevel) {
-              this.scene.start("VictoryScene", { score: data?.score, timeMs: cumMs });
-            } else {
-              this.scene.start(data?.nextScene ?? "Level2Scene", { score: data?.score, cumulativeTimeMs: cumMs });
-            }
+            this.scene.start(data?.nextScene ?? "Level2Scene", {
+              score: data?.score,
+              cumulativeTimeMs: cumMs,
+              difficulty,
+            });
           });
         }
       },
     });
 
     this.cameras.main.fadeIn(400, 0, 0, 0);
+  }
+
+  private checkAbilityUnlock(level: number): string | null {
+    const abilities = getSettings().unlockedAbilities;
+    if (level === 1 && !abilities.doubleJump) {
+      unlockAbility("doubleJump");
+      soundManager.abilityUnlock();
+      return "DOUBLE JUMP";
+    }
+    if (level === 2 && !abilities.dash) {
+      unlockAbility("dash");
+      soundManager.abilityUnlock();
+      return "DASH  [Q]";
+    }
+    if (level === 3 && !abilities.wallClimb) {
+      unlockAbility("wallClimb");
+      soundManager.abilityUnlock();
+      return "WALL CLIMB";
+    }
+    return null;
+  }
+
+  private showAbilityUnlock(W: number, H: number, abilityName: string) {
+    const bannerY = H / 2 + 48;
+
+    const bannerBg = this.add.graphics();
+    bannerBg.fillStyle(0x002200, 0.92);
+    bannerBg.fillRoundedRect(W / 2 - 260, bannerY - 26, 520, 52, 10);
+    bannerBg.lineStyle(2, 0x00ff88, 0.8);
+    bannerBg.strokeRoundedRect(W / 2 - 260, bannerY - 26, 520, 52, 10);
+    bannerBg.setAlpha(0);
+
+    const icon = this.add
+      .text(W / 2, bannerY - 4, `★  NEW ABILITY UNLOCKED: ${abilityName}  ★`, {
+        fontSize: "20px",
+        fontFamily: "monospace",
+        color: "#00ff88",
+        stroke: "#002200",
+        strokeThickness: 3,
+        shadow: { offsetX: 0, offsetY: 0, color: "#00ff88", blur: 12, fill: true },
+      })
+      .setOrigin(0.5)
+      .setAlpha(0);
+
+    this.tweens.add({ targets: [bannerBg, icon], alpha: 1, duration: 500, ease: "Power2" });
+    this.tweens.add({
+      targets: icon,
+      scaleX: { from: 0.97, to: 1.03 },
+      scaleY: { from: 0.97, to: 1.03 },
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
   }
 
   private createButton(x: number, y: number, label: string, color: string, cb: () => void) {

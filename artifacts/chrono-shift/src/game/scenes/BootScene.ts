@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { COLORS } from "../constants";
+import { hasCutscenePlayed } from "../utils/settings";
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -10,8 +11,7 @@ export class BootScene extends Phaser.Scene {
     const W = this.cameras.main.width;
     const H = this.cameras.main.height;
 
-    const bg = this.add.rectangle(W / 2, H / 2, W, H, 0x000f1f);
-    bg.setDepth(0);
+    this.add.rectangle(W / 2, H / 2, W, H, 0x000f1f).setDepth(0);
 
     const boxW = 320;
     const boxH = 40;
@@ -60,13 +60,17 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     this.createTextures();
-    this.scene.start("MenuScene");
+    if (hasCutscenePlayed()) {
+      this.scene.start("MenuScene");
+    } else {
+      this.scene.start("CutsceneScene");
+    }
   }
 
   private createTextures() {
     const g = this.make.graphics({ x: 0, y: 0 });
 
-    // ── Player (28×44 cyan humanoid rectangle) ──
+    // ── Player (28×44 cyan humanoid) ──
     g.clear();
     g.fillStyle(COLORS.PLAYER, 1);
     g.fillRect(4, 0, 20, 36);
@@ -76,7 +80,7 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(8, 4, 12, 14);
     g.generateTexture("player", 28, 44);
 
-    // ── Player damaged flash ──
+    // ── Player damaged ──
     g.clear();
     g.fillStyle(0xff4444, 1);
     g.fillRect(4, 0, 20, 36);
@@ -93,6 +97,32 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x0d3320, 1);
     g.fillRect(0, 20, 32, 4);
     g.generateTexture("platform", 32, 24);
+
+    // ── Ruins platform tile (warm brown) ──
+    g.clear();
+    g.fillStyle(COLORS.RUINS_PLATFORM, 1);
+    g.fillRect(0, 0, 32, 24);
+    g.fillStyle(COLORS.RUINS_LIGHT, 1);
+    g.fillRect(0, 0, 32, 5);
+    g.fillStyle(0x3a1a08, 1);
+    g.fillRect(0, 20, 32, 4);
+    for (let i = 0; i < 32; i += 10) {
+      g.fillStyle(0x4a2810, 0.35);
+      g.fillRect(i, 6, 8, 12);
+    }
+    g.generateTexture("platform_ruins", 32, 24);
+
+    // ── Future platform tile (neon blue) ──
+    g.clear();
+    g.fillStyle(COLORS.FUTURE_PLATFORM, 1);
+    g.fillRect(0, 0, 32, 24);
+    g.fillStyle(COLORS.FUTURE_LIGHT, 1);
+    g.fillRect(0, 0, 32, 4);
+    g.fillStyle(0x000a1a, 1);
+    g.fillRect(0, 20, 32, 4);
+    g.fillStyle(0x00ffff, 0.18);
+    g.fillRect(0, 0, 32, 2);
+    g.generateTexture("platform_future", 32, 24);
 
     // ── Ground tile ──
     g.clear();
@@ -116,7 +146,7 @@ export class BootScene extends Phaser.Scene {
     }
     g.generateTexture("platform_collapse", 32, 20);
 
-    // ── Crystal (diamond shape 24×24) ──
+    // ── Crystal ──
     g.clear();
     g.fillStyle(COLORS.CRYSTAL, 1);
     g.fillTriangle(12, 0, 24, 12, 12, 24);
@@ -125,7 +155,7 @@ export class BootScene extends Phaser.Scene {
     g.fillTriangle(8, 4, 16, 4, 12, 10);
     g.generateTexture("crystal", 24, 24);
 
-    // ── Time Shard (14×14) ──
+    // ── Time Shard ──
     g.clear();
     g.fillStyle(COLORS.SHARD, 1);
     g.fillTriangle(7, 0, 14, 7, 7, 14);
@@ -134,7 +164,7 @@ export class BootScene extends Phaser.Scene {
     g.fillTriangle(4, 3, 10, 3, 7, 7);
     g.generateTexture("shard", 14, 14);
 
-    // ── Health pickup (20×20 heart-ish) ──
+    // ── Health pickup ──
     g.clear();
     g.fillStyle(COLORS.HEALTH_PICKUP, 1);
     g.fillCircle(6, 6, 6);
@@ -142,7 +172,7 @@ export class BootScene extends Phaser.Scene {
     g.fillTriangle(1, 8, 19, 8, 10, 20);
     g.generateTexture("health_pickup", 20, 20);
 
-    // ── Temporal Drone (32×20) ──
+    // ── Temporal Drone ──
     g.clear();
     g.fillStyle(COLORS.DRONE, 1);
     g.fillRect(0, 4, 32, 14);
@@ -154,7 +184,22 @@ export class BootScene extends Phaser.Scene {
     g.fillCircle(16, 11, 5);
     g.generateTexture("drone", 32, 20);
 
-    // ── Phase Shifter (28×28) ──
+    // ── Chaser Enemy (36×36 aggressive diamond) ──
+    g.clear();
+    g.fillStyle(COLORS.CHASER, 0.9);
+    g.fillTriangle(18, 0, 36, 18, 18, 36);
+    g.fillTriangle(18, 0, 0, 18, 18, 36);
+    g.fillStyle(0xff88aa, 1);
+    g.fillCircle(18, 18, 7);
+    g.fillStyle(0xffffff, 0.8);
+    g.fillCircle(15, 16, 2);
+    g.fillCircle(21, 16, 2);
+    g.fillStyle(0xff0044, 1);
+    g.fillCircle(15, 16, 1);
+    g.fillCircle(21, 16, 1);
+    g.generateTexture("chaser", 36, 36);
+
+    // ── Phase Shifter ──
     g.clear();
     g.fillStyle(COLORS.PHASE_SHIFTER, 1);
     g.fillTriangle(14, 0, 28, 20, 0, 20);
@@ -165,7 +210,7 @@ export class BootScene extends Phaser.Scene {
     g.fillCircle(14, 11, 2);
     g.generateTexture("phase_shifter", 28, 28);
 
-    // ── Pulsar (36×36) ──
+    // ── Pulsar ──
     g.clear();
     g.fillStyle(COLORS.PULSAR, 0.3);
     g.fillCircle(18, 18, 18);
@@ -177,7 +222,36 @@ export class BootScene extends Phaser.Scene {
     g.fillCircle(18, 18, 4);
     g.generateTexture("pulsar", 36, 36);
 
-    // ── Projectile (12×12) ──
+    // ── Boss (80×80 imposing enemy) ──
+    g.clear();
+    g.fillStyle(COLORS.BOSS, 0.95);
+    g.fillRect(8, 0, 64, 70);
+    g.fillRect(0, 20, 80, 36);
+    g.fillStyle(COLORS.BOSS_GLOW, 1);
+    g.fillRect(0, 20, 80, 8);
+    g.fillRect(0, 48, 80, 8);
+    // Eyes
+    g.fillStyle(0xffff00, 1);
+    g.fillCircle(24, 18, 8);
+    g.fillCircle(56, 18, 8);
+    g.fillStyle(0xff0000, 1);
+    g.fillCircle(24, 18, 5);
+    g.fillCircle(56, 18, 5);
+    g.fillStyle(0x000000, 1);
+    g.fillCircle(25, 17, 2);
+    g.fillCircle(57, 17, 2);
+    // Chest glow
+    g.fillStyle(0xff8800, 0.7);
+    g.fillCircle(40, 35, 14);
+    g.fillStyle(0xffff00, 0.8);
+    g.fillCircle(40, 35, 7);
+    // Horns
+    g.fillStyle(COLORS.BOSS, 1);
+    g.fillTriangle(14, 0, 24, 0, 19, -12);
+    g.fillTriangle(56, 0, 66, 0, 61, -12);
+    g.generateTexture("boss", 80, 80);
+
+    // ── Projectile ──
     g.clear();
     g.fillStyle(COLORS.PROJECTILE, 1);
     g.fillCircle(6, 6, 6);
@@ -185,7 +259,7 @@ export class BootScene extends Phaser.Scene {
     g.fillCircle(6, 6, 3);
     g.generateTexture("projectile", 12, 12);
 
-    // ── Spike (16×28 upward triangle) ──
+    // ── Spike ──
     g.clear();
     g.fillStyle(COLORS.SPIKE, 1);
     g.fillTriangle(8, 0, 16, 28, 0, 28);
@@ -193,7 +267,7 @@ export class BootScene extends Phaser.Scene {
     g.fillTriangle(8, 2, 14, 26, 8, 16);
     g.generateTexture("spike", 16, 28);
 
-    // ── Exit portal (48×64) ──
+    // ── Exit portal ──
     g.clear();
     g.fillStyle(COLORS.EXIT, 0.2);
     g.fillEllipse(24, 40, 48, 64);
@@ -205,25 +279,25 @@ export class BootScene extends Phaser.Scene {
     g.fillEllipse(24, 40, 14, 20);
     g.generateTexture("exit", 48, 64);
 
-    // ── Particle (4×4 circle) ──
+    // ── Particle ──
     g.clear();
     g.fillStyle(0xffffff, 1);
     g.fillCircle(2, 2, 2);
     g.generateTexture("particle", 4, 4);
 
-    // ── Ghost particle (for rewind effect) ──
+    // ── Ghost particle ──
     g.clear();
     g.fillStyle(0x00ffff, 0.4);
     g.fillCircle(3, 3, 3);
     g.generateTexture("ghost_particle", 6, 6);
 
-    // ── Star (background decoration) ──
+    // ── Star ──
     g.clear();
     g.fillStyle(0xffffff, 1);
     g.fillCircle(1, 1, 1);
     g.generateTexture("star", 2, 2);
 
-    // ── Time vortex background zone ──
+    // ── Time vortex zone ──
     g.clear();
     g.fillStyle(0x220044, 0.6);
     g.fillRect(0, 0, 200, 200);

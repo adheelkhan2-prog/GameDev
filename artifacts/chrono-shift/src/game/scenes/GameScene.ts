@@ -5,11 +5,22 @@ import { UIManager } from "../managers/UIManager";
 import { TemporalDrone } from "../objects/enemies/TemporalDrone";
 import { PhaseShifter } from "../objects/enemies/PhaseShifter";
 import { Pulsar } from "../objects/enemies/Pulsar";
+import { ChaserEnemy } from "../objects/enemies/ChaserEnemy";
+import { BossEnemy } from "../objects/enemies/BossEnemy";
+import { GhostReplayManager } from "../managers/GhostReplayManager";
 import { Projectile } from "../objects/Projectile";
 import { Collectible } from "../objects/Collectible";
 import { EnemyBase } from "../objects/enemies/EnemyBase";
-import { CRYSTALS_PER_LEVEL, COLORS, COLLAPSE_DELAY, COLLAPSE_RESPAWN } from "../constants";
+import {
+  CRYSTALS_PER_LEVEL,
+  COLORS,
+  COLLAPSE_DELAY,
+  COLLAPSE_RESPAWN,
+  DIFFICULTY,
+  type DifficultyKey,
+} from "../constants";
 import { soundManager } from "../managers/SoundManager";
+import { getSettings } from "../utils/settings";
 
 export interface PlatformDef {
   x: number;
@@ -17,11 +28,12 @@ export interface PlatformDef {
   w: number;
   h?: number;
   type?: "normal" | "collapse";
+  collapse?: boolean;
   tileKey?: string;
 }
 
 export interface EnemyDef {
-  type: "drone" | "phase_shifter" | "pulsar";
+  type: "drone" | "phase_shifter" | "pulsar" | "chaser" | "boss";
   x: number;
   y: number;
   patrolMin?: number;
@@ -30,7 +42,7 @@ export interface EnemyDef {
 }
 
 export interface CollectibleDef {
-  type: "crystal" | "shard" | "health";
+  type?: "crystal" | "shard" | "health";
   x: number;
   y: number;
 }
@@ -44,6 +56,12 @@ export interface SpikeDef {
 export interface VortexDef {
   x: number;
   y: number;
+}
+
+interface CollapseData {
+  originalX: number;
+  originalY: number;
+  triggered: boolean;
 }
 
 export abstract class GameScene extends Phaser.Scene {
@@ -67,9 +85,16 @@ export abstract class GameScene extends Phaser.Scene {
   protected paused = false;
   protected cumulativeTimeMs = 0;
 
+  protected requiresBossDefeat = false;
+  protected bossDefeated = false;
+  protected boss: BossEnemy | null = null;
+  protected ghostReplayManager: GhostReplayManager | null = null;
+  protected defaultTileKey = "platform";
+  protected bgColor: number = COLORS.BG2;
+  protected difficultyKey: DifficultyKey = "normal";
+
   private pauseContainer!: Phaser.GameObjects.Container;
   private pauseInfoText!: Phaser.GameObjects.Text;
-  private keyEsc!: Phaser.Input.Keyboard.Key;
 
   protected abstract levelNumber: number;
   protected abstract worldWidth: number;
@@ -86,8 +111,10 @@ export abstract class GameScene extends Phaser.Scene {
   protected abstract buildSpikes(): SpikeDef[];
   protected abstract buildVortexes?(): VortexDef[];
 
-  init(data: { score?: number; cumulativeTimeMs?: number }) {
+  init(data: { score?: number; cumulativeTimeMs?: number; difficulty?: string }) {
     this.cumulativeTimeMs = data?.cumulativeTimeMs ?? 0;
+    const raw = (data?.difficulty ?? getSettings().difficulty) as string;
+    this.difficultyKey = (DIFFICULTY[raw as DifficultyKey] ? raw : "normal") as DifficultyKey;
   }
 
   create() {
@@ -96,6 +123,8 @@ export abstract class GameScene extends Phaser.Scene {
     this.crystalsCollected = 0;
     this.enemyList = [];
     this.collectibles = [];
+    this.bossDefeated = false;
+    this.boss = null;
 
     this.createBackground();
     this.createPlatforms();
@@ -106,7 +135,17 @@ export abstract class GameScene extends Phaser.Scene {
 
     this.timeManager = new TimeManager(this);
 
-    this.player = new Player(this, this.spawnX, this.spawnY, this.timeManager);
+    const settings = getSettings();
+    const diff = DIFFICULTY[this.difficultyKey];
+
+    this.player = new Player(
+      this,
+      this.spawnX,
+      this.spawnY,
+      this.timeManager,
+      diff.playerHealth,
+      settings.unlockedAbilities
+    );
     this.player.onDamage = () => this.uiManager?.flashDamage();
     this.player.onDeath = () => this.handleGameOver();
 
@@ -114,18 +153,25 @@ export abstract class GameScene extends Phaser.Scene {
     this.setupCollisions();
     this.setupCamera();
 
-    this.uiManager = new UIManager(this, this.timeManager, this.levelNumber);
+    this.uiManager = new UIManager(
+      this,
+      this.timeManager,
+      this.levelNumber,
+      settings.unlockedAbilities,
+      diff.playerHealth
+    );
 
-    // Pause key
-    this.keyEsc = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
     this.input.keyboard!.on("keydown-ESC", () => this.togglePause());
 
-    this.pauseContainer = this.add.container(0, 0).setDepth(200).setScrollFactor(0).setVisible(false) as Phaser.GameObjects.Container;
+    this.pauseContainer = this.add
+      .container(0, 0)
+      .setDepth(200)
+      .setScrollFactor(0)
+      .setVisible(false) as Phaser.GameObjects.Container;
     this.buildPauseMenu();
 
-    // Build crystal position list (in-order) for the mini-map
     const crystalDefs = this.buildCollectibles()
-      .filter((d) => d.type === "crystal")
+      .filter((d) => (d.type ?? "crystal") === "crystal")
       .map((d) => ({ x: d.x, y: d.y }));
 
     this.uiManager.initMiniMap({
@@ -134,22 +180,37 @@ export abstract class GameScene extends Phaser.Scene {
       crystals: crystalDefs,
       exitX: this.exitX,
       exitY: this.exitY,
-      platforms: this.buildPlatforms().map((p) => ({ x: p.x, y: p.y, w: p.w, h: p.h })),
+      platforms: this.buildPlatforms().map((p) => ({
+        x: p.x,
+        y: p.y,
+        w: p.w,
+        h: p.h,
+      })),
     });
+
+    this.ghostReplayManager = new GhostReplayManager(this, this.levelNumber);
+
+    if (this.levelNumber === 1) {
+      soundManager.startAmbientMusic();
+    }
+
+    this.cameras.main.fadeIn(300, 0, 0, 0);
   }
 
   private createBackground() {
     const W = this.worldWidth;
     const H = this.worldHeight;
 
-    this.add.rectangle(W / 2, H / 2, W, H, COLORS.BG2).setDepth(0);
+    this.add.rectangle(W / 2, H / 2, W, H, this.bgColor).setDepth(0);
 
-    // Animated star field
-    const starCount = Math.floor(W / 12);
+    const starCount = Math.floor(W / 14);
     for (let i = 0; i < starCount; i++) {
       const x = Phaser.Math.Between(0, W);
       const y = Phaser.Math.Between(0, H);
-      const star = this.add.image(x, y, "star").setDepth(1).setAlpha(Phaser.Math.FloatBetween(0.2, 0.9));
+      const star = this.add
+        .image(x, y, "star")
+        .setDepth(1)
+        .setAlpha(Phaser.Math.FloatBetween(0.2, 0.9));
       this.tweens.add({
         targets: star,
         alpha: Phaser.Math.FloatBetween(0.05, 0.3),
@@ -160,28 +221,23 @@ export abstract class GameScene extends Phaser.Scene {
       });
     }
 
-    // Horizontal grid lines (deep blue)
     const gridGfx = this.add.graphics();
-    gridGfx.lineStyle(1, 0x112233, 0.25);
-    for (let y = 0; y < H; y += 60) {
-      gridGfx.lineBetween(0, y, W, y);
-    }
-    for (let x = 0; x < W; x += 80) {
-      gridGfx.lineBetween(x, 0, x, H);
-    }
+    gridGfx.lineStyle(1, 0x112233, 0.22);
+    for (let y = 0; y < H; y += 60) gridGfx.lineBetween(0, y, W, y);
+    for (let x = 0; x < W; x += 80) gridGfx.lineBetween(x, 0, x, H);
     gridGfx.setDepth(2);
   }
 
   private createPlatforms() {
     this.platforms = this.physics.add.staticGroup();
-    const defs = this.buildPlatforms();
-
-    for (const def of defs) {
+    for (const def of this.buildPlatforms()) {
       const w = def.w;
       const h = def.h ?? 24;
       const cols = Math.ceil(w / 32);
-      const isCollapse = def.type === "collapse";
-      const tileKey = isCollapse ? "platform_collapse" : (def.tileKey ?? "platform");
+      const isCollapse = def.type === "collapse" || def.collapse === true;
+      const tileKey = isCollapse
+        ? "platform_collapse"
+        : (def.tileKey ?? this.defaultTileKey);
 
       for (let c = 0; c < cols; c++) {
         const tileW = Math.min(32, w - c * 32);
@@ -194,7 +250,9 @@ export abstract class GameScene extends Phaser.Scene {
         this.platforms.add(tile);
 
         if (isCollapse) {
-          (tile as Phaser.Physics.Arcade.Image & { collapseData?: CollapseData }).collapseData = {
+          (
+            tile as Phaser.Physics.Arcade.Image & { collapseData?: CollapseData }
+          ).collapseData = {
             originalX: tx,
             originalY: ty,
             triggered: false,
@@ -206,11 +264,14 @@ export abstract class GameScene extends Phaser.Scene {
 
   private createSpikes() {
     this.spikes = this.physics.add.staticGroup();
-    const defs = this.buildSpikes();
-    for (const def of defs) {
+    for (const def of this.buildSpikes()) {
       const count = def.count ?? 1;
       for (let i = 0; i < count; i++) {
-        const spike = this.physics.add.staticImage(def.x + i * 16 + 8, def.y, "spike");
+        const spike = this.physics.add.staticImage(
+          def.x + i * 16 + 8,
+          def.y,
+          "spike"
+        );
         spike.setDepth(8);
         this.spikes.add(spike);
       }
@@ -219,9 +280,11 @@ export abstract class GameScene extends Phaser.Scene {
 
   private createVortexes() {
     if (!this.buildVortexes) return;
-    const defs = this.buildVortexes();
-    for (const def of defs) {
-      const vortex = this.add.image(def.x + 100, def.y + 100, "vortex_zone").setDepth(4).setAlpha(0.7);
+    for (const def of this.buildVortexes()) {
+      const vortex = this.add
+        .image(def.x + 100, def.y + 100, "vortex_zone")
+        .setDepth(4)
+        .setAlpha(0.7);
       this.tweens.add({
         targets: vortex,
         rotation: Math.PI * 2,
@@ -244,8 +307,6 @@ export abstract class GameScene extends Phaser.Scene {
     this.exitSprite.setDepth(10);
     this.exitSprite.setImmovable(true);
     (this.exitSprite.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-
-    // Pulse animation
     this.tweens.add({
       targets: this.exitSprite,
       scaleY: 1.15,
@@ -255,8 +316,6 @@ export abstract class GameScene extends Phaser.Scene {
       repeat: -1,
       ease: "Sine.easeInOut",
     });
-
-    // Rotate slightly
     this.tweens.add({
       targets: this.exitSprite,
       alpha: { from: 0.6, to: 1 },
@@ -268,33 +327,38 @@ export abstract class GameScene extends Phaser.Scene {
 
   private createCollectibles() {
     this.crystals = this.physics.add.staticGroup();
-    const defs = this.buildCollectibles();
     let crystalIdx = 0;
-    for (const def of defs) {
-      const c = new Collectible(this, def.x, def.y, def.type);
-      if (def.type === "crystal") {
+    for (const def of this.buildCollectibles()) {
+      const type = def.type ?? "crystal";
+      const c = new Collectible(this, def.x, def.y, type);
+      if (type === "crystal") {
         (c as Collectible & { crystalIndex: number }).crystalIndex = crystalIdx++;
       }
       this.collectibles.push(c);
-      if (def.type === "crystal") {
+      if (type === "crystal") {
         this.crystals.add(c);
       }
     }
   }
 
   private createEnemies() {
-    this.enemies = this.physics.add.group({ classType: Phaser.Physics.Arcade.Sprite });
+    this.enemies = this.physics.add.group({
+      classType: Phaser.Physics.Arcade.Sprite,
+    });
     this.projectiles = this.physics.add.group({ classType: Projectile });
 
-    const platformBoundsForPS = this.buildPlatforms().map((p) => ({
+    const platformBounds = this.buildPlatforms().map((p) => ({
       x: p.x,
       y: p.y,
       w: p.w,
       h: p.h ?? 24,
     }));
 
+    const diff = DIFFICULTY[this.difficultyKey];
+
     for (const def of this.buildEnemies()) {
       let enemy: EnemyBase;
+
       if (def.type === "drone") {
         const drone = new TemporalDrone(
           this,
@@ -304,26 +368,107 @@ export abstract class GameScene extends Phaser.Scene {
           def.patrolMin ?? def.x - 150,
           def.patrolMax ?? def.x + 150
         );
+        drone.baseSpeedMultiplier = diff.enemySpeed;
         this.timeManager.register(drone);
         enemy = drone;
       } else if (def.type === "phase_shifter") {
-        enemy = new PhaseShifter(this, def.x, def.y, this.timeManager, platformBoundsForPS);
-        this.timeManager.register(enemy);
+        const ps = new PhaseShifter(
+          this,
+          def.x,
+          def.y,
+          this.timeManager,
+          platformBounds
+        );
+        (ps as EnemyBase & { baseSpeedMultiplier?: number }).baseSpeedMultiplier =
+          diff.enemySpeed;
+        this.timeManager.register(ps);
+        enemy = ps;
+      } else if (def.type === "chaser") {
+        const chaser = new ChaserEnemy(
+          this,
+          def.x,
+          def.y,
+          this.timeManager,
+          this.player,
+          def.patrolMin ?? def.x - 200,
+          def.patrolMax ?? def.x + 200
+        );
+        chaser.baseSpeedMultiplier = diff.enemySpeed;
+        enemy = chaser;
+      } else if (def.type === "boss") {
+        const bossEnemy = new BossEnemy(
+          this,
+          def.x,
+          def.y,
+          this.timeManager,
+          this.player,
+          this.projectiles,
+          def.patrolMin ?? 100,
+          def.patrolMax ?? this.worldWidth - 100
+        );
+        bossEnemy.onDefeated = () => this.onBossDefeated();
+        bossEnemy.onPhaseChange = (phase) => {
+          soundManager.bossPhaseChange();
+          this.cameras.main.flash(300, 255, 100, 0);
+          this.cameras.main.shake(200, 0.01);
+        };
+        this.boss = bossEnemy;
+        enemy = bossEnemy;
       } else {
-        enemy = new Pulsar(this, def.x, def.y, this.timeManager, this.projectiles, def.fireAngle ?? 180);
+        // pulsar
+        enemy = new Pulsar(
+          this,
+          def.x,
+          def.y,
+          this.timeManager,
+          this.projectiles,
+          def.fireAngle ?? 180
+        );
       }
+
       this.enemies.add(enemy, true);
       this.enemyList.push(enemy);
     }
   }
 
+  private onBossDefeated() {
+    this.bossDefeated = true;
+    soundManager.bossDefeat();
+    this.cameras.main.flash(600, 255, 180, 0);
+    this.cameras.main.shake(400, 0.018);
+    this.uiManager?.showBossDefeated();
+
+    // Particle burst at boss position
+    if (this.boss) {
+      try {
+        const bx = this.boss.x;
+        const by = this.boss.y;
+        const em = this.add.particles(bx, by, "particle", {
+          speed: { min: 80, max: 400 },
+          angle: { min: 0, max: 360 },
+          scale: { start: 1.5, end: 0 },
+          alpha: { start: 1, end: 0 },
+          lifespan: { min: 600, max: 1200 },
+          quantity: 3,
+          frequency: 30,
+          tint: [0xff4400, 0xff8800, 0xffff00, 0xffffff],
+        });
+        this.time.delayedCall(1200, () => em.destroy());
+      } catch {}
+    }
+  }
+
   private setupCollisions() {
     // Player ↔ platforms
-    this.physics.add.collider(this.player, this.platforms, (_player, platform) => {
-      this.handleCollapsePlatform(platform as Phaser.Physics.Arcade.Image);
+    this.physics.add.collider(this.player, this.platforms, (_p, platform) => {
+      this.handleCollapsePlatform(
+        platform as Phaser.Physics.Arcade.Image & {
+          collapseData?: CollapseData;
+        }
+      );
     });
 
-    // Player ↔ spikes
+    // Player ↔ spikes — instant death
     this.physics.add.overlap(this.player, this.spikes, () => {
       if (!this.player.invincible && this.player.active) {
         this.player.health = 0;
@@ -331,42 +476,84 @@ export abstract class GameScene extends Phaser.Scene {
       }
     });
 
-    // Collectibles handled via distance checks in update()
+    // Player ↔ enemies — with stomp detection
+    this.physics.add.overlap(
+      this.player,
+      this.enemies,
+      (_playerObj, enemyObj) => {
+        const enemy = enemyObj as EnemyBase;
+        if (!enemy.active) return;
 
-    // Player ↔ enemies
-    this.physics.add.overlap(this.player, this.enemies, () => {
-      if (this.player.active && !this.player.invincible) {
-        this.player.takeDamage();
+        const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+        const stompVelocity = 60;
+        const isStomping =
+          playerBody.velocity.y > stompVelocity &&
+          this.player.y < enemy.y - 8;
+
+        if (isStomping) {
+          const died = enemy.takeDamage(1);
+          this.player.setVelocityY(-370);
+          soundManager.stomp();
+          if (died) {
+            this.player.addScore(Math.round(150 * DIFFICULTY[this.difficultyKey].scoreBonus));
+          } else {
+            this.player.addScore(30);
+          }
+          this.cameras.main.shake(70, 0.004);
+          // Hit spark particles
+          try {
+            const em = this.add.particles(enemy.x, enemy.y, "particle", {
+              speed: { min: 40, max: 160 },
+              angle: { min: 200, max: 340 },
+              scale: { start: 0.8, end: 0 },
+              alpha: { start: 1, end: 0 },
+              lifespan: 250,
+              quantity: 10,
+              tint: [0xffff00, 0xff8800, 0xffffff],
+            });
+            this.time.delayedCall(300, () => em.destroy());
+          } catch {}
+          if (enemy === this.boss) soundManager.bossHit();
+        } else if (!this.player.invincible && this.player.active) {
+          this.player.takeDamage();
+        }
       }
-    });
+    );
 
     // Player ↔ projectiles
-    this.physics.add.overlap(this.player, this.projectiles, (_p, projSprite) => {
-      const proj = projSprite as Projectile;
-      if (!proj.active) return;
-      proj.setActive(false).setVisible(false);
-      if (!this.player.invincible && this.player.active) {
-        this.player.takeDamage();
+    this.physics.add.overlap(
+      this.player,
+      this.projectiles,
+      (_p, projSprite) => {
+        const proj = projSprite as Projectile;
+        if (!proj.active) return;
+        proj.setActive(false).setVisible(false);
+        if (!this.player.invincible && this.player.active) {
+          this.player.takeDamage();
+        }
       }
-    });
+    );
 
     // Player ↔ exit
     this.physics.add.overlap(this.player, this.exitSprite, () => {
-      if (this.crystalsCollected >= this.totalCrystals && !this.levelComplete) {
+      const crystalsOk = this.crystalsCollected >= this.totalCrystals;
+      const bossOk = !this.requiresBossDefeat || this.bossDefeated;
+      if (crystalsOk && bossOk && !this.levelComplete) {
         this.handleLevelComplete();
       }
     });
 
-    // Enemies collide with platforms (drones)
+    // Enemies ↔ platforms
     this.physics.add.collider(this.enemies, this.platforms);
   }
 
-  private handleCollapsePlatform(platform: Phaser.Physics.Arcade.Image & { collapseData?: CollapseData }) {
+  private handleCollapsePlatform(
+    platform: Phaser.Physics.Arcade.Image & { collapseData?: CollapseData }
+  ) {
     const cd = platform.collapseData;
     if (!cd || cd.triggered) return;
     cd.triggered = true;
 
-    // Blink warning
     this.tweens.add({
       targets: platform,
       alpha: { from: 1, to: 0.2 },
@@ -377,10 +564,8 @@ export abstract class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(COLLAPSE_DELAY, () => {
       if (platform.active) {
-        platform.setVisible(false);
-        platform.setActive(false);
+        platform.setVisible(false).setActive(false);
         (platform.body as Phaser.Physics.Arcade.StaticBody).enable = false;
-
         this.time.delayedCall(COLLAPSE_RESPAWN, () => {
           platform.setVisible(true).setActive(true).setAlpha(1);
           (platform.body as Phaser.Physics.Arcade.StaticBody).enable = true;
@@ -395,7 +580,7 @@ export abstract class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
     this.cameras.main.setZoom(1);
     this.cameras.main.startFollow(this.player, true, 0.09, 0.09);
-    this.cameras.main.setBackgroundColor(COLORS.BG2);
+    this.cameras.main.setBackgroundColor(this.bgColor);
   }
 
   private buildPauseMenu() {
@@ -404,11 +589,11 @@ export abstract class GameScene extends Phaser.Scene {
     const cx = W / 2;
     const cy = H / 2;
 
-    // Dark overlay
-    const overlay = this.add.rectangle(cx, cy, W, H, 0x000000, 0.72).setInteractive();
+    const overlay = this.add
+      .rectangle(cx, cy, W, H, 0x000000, 0.72)
+      .setInteractive();
     this.pauseContainer.add(overlay);
 
-    // Panel
     const panel = this.add.graphics();
     panel.fillStyle(0x001a33, 0.97);
     panel.fillRoundedRect(cx - 200, cy - 200, 400, 400, 16);
@@ -416,7 +601,6 @@ export abstract class GameScene extends Phaser.Scene {
     panel.strokeRoundedRect(cx - 200, cy - 200, 400, 400, 16);
     this.pauseContainer.add(panel);
 
-    // Decorative corner accents
     const acc = this.add.graphics();
     acc.lineStyle(2, 0x00ffcc, 0.3);
     acc.lineBetween(cx - 200, cy - 200, cx - 160, cy - 200);
@@ -429,32 +613,32 @@ export abstract class GameScene extends Phaser.Scene {
     acc.lineBetween(cx + 200, cy + 200, cx + 200, cy + 160);
     this.pauseContainer.add(acc);
 
-    // Title
-    const title = this.add.text(cx, cy - 155, "PAUSED", {
-      fontSize: "42px",
-      fontFamily: "monospace",
-      color: "#00ffcc",
-      stroke: "#003322",
-      strokeThickness: 4,
-      shadow: { offsetX: 0, offsetY: 0, color: "#00ffcc", blur: 14, fill: true },
-    }).setOrigin(0.5);
+    const title = this.add
+      .text(cx, cy - 155, "PAUSED", {
+        fontSize: "42px",
+        fontFamily: "monospace",
+        color: "#00ffcc",
+        stroke: "#003322",
+        strokeThickness: 4,
+        shadow: { offsetX: 0, offsetY: 0, color: "#00ffcc", blur: 14, fill: true },
+      })
+      .setOrigin(0.5);
     this.pauseContainer.add(title);
 
-    // Divider
     const div = this.add.graphics();
     div.lineStyle(1, 0x00ffcc, 0.3);
     div.lineBetween(cx - 150, cy - 108, cx + 150, cy - 108);
     this.pauseContainer.add(div);
 
-    // Level & score info (updated dynamically when pause opens)
-    this.pauseInfoText = this.add.text(cx, cy - 80, `LEVEL ${this.levelNumber}`, {
-      fontSize: "16px",
-      fontFamily: "monospace",
-      color: "#446677",
-    }).setOrigin(0.5);
+    this.pauseInfoText = this.add
+      .text(cx, cy - 80, `LEVEL ${this.levelNumber}`, {
+        fontSize: "16px",
+        fontFamily: "monospace",
+        color: "#446677",
+      })
+      .setOrigin(0.5);
     this.pauseContainer.add(this.pauseInfoText);
 
-    // Buttons
     const btnDefs = [
       { label: "▶  RESUME",        color: "#00ff88", dy: -20,  action: () => this.togglePause() },
       { label: "↺  RESTART LEVEL", color: "#ffee44", dy: 55,   action: () => this.restartLevel() },
@@ -463,7 +647,6 @@ export abstract class GameScene extends Phaser.Scene {
 
     for (const def of btnDefs) {
       const by = cy + def.dy;
-
       const bg = this.add.graphics();
       bg.fillStyle(0x001122, 0.85);
       bg.fillRoundedRect(cx - 155, by - 24, 310, 48, 8);
@@ -471,13 +654,16 @@ export abstract class GameScene extends Phaser.Scene {
       bg.strokeRoundedRect(cx - 155, by - 24, 310, 48, 8);
       this.pauseContainer.add(bg);
 
-      const btn = this.add.text(cx, by, def.label, {
-        fontSize: "22px",
-        fontFamily: "monospace",
-        color: def.color,
-        stroke: "#000000",
-        strokeThickness: 2,
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const btn = this.add
+        .text(cx, by, def.label, {
+          fontSize: "22px",
+          fontFamily: "monospace",
+          color: def.color,
+          stroke: "#000000",
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
 
       btn.on("pointerover", () => {
         btn.setScale(1.07);
@@ -499,12 +685,13 @@ export abstract class GameScene extends Phaser.Scene {
       this.pauseContainer.add(btn);
     }
 
-    // ESC hint at bottom
-    const hint = this.add.text(cx, cy + 175, "Press ESC to resume", {
-      fontSize: "13px",
-      fontFamily: "monospace",
-      color: "#334455",
-    }).setOrigin(0.5);
+    const hint = this.add
+      .text(cx, cy + 175, "Press ESC to resume", {
+        fontSize: "13px",
+        fontFamily: "monospace",
+        color: "#334455",
+      })
+      .setOrigin(0.5);
     this.pauseContainer.add(hint);
   }
 
@@ -512,16 +699,15 @@ export abstract class GameScene extends Phaser.Scene {
     if (this.gameOver || this.levelComplete) return;
 
     if (!this.paused) {
-      // ── Pausing ──
       this.paused = true;
       this.physics.pause();
       this.tweens.pauseAll();
       this.uiManager?.pauseTimer();
-
-      // Update info text with current score
       const score = this.player?.score ?? 0;
-      this.pauseInfoText.setText(`LEVEL ${this.levelNumber}  •  SCORE: ${score}`);
-
+      const diffLabel = this.difficultyKey.toUpperCase();
+      this.pauseInfoText.setText(
+        `LEVEL ${this.levelNumber}  •  SCORE: ${score}  •  ${diffLabel}`
+      );
       this.pauseContainer.setVisible(true);
       this.tweens.add({
         targets: this.pauseContainer,
@@ -530,9 +716,6 @@ export abstract class GameScene extends Phaser.Scene {
       });
       soundManager.pauseOpen();
     } else {
-      // ── Resuming ──
-      // Must resume tweens first so the fade-out tween can actually run
-      // (tweens.pauseAll() also blocks newly added tweens)
       this.tweens.resumeAll();
       this.tweens.add({
         targets: this.pauseContainer,
@@ -554,10 +737,11 @@ export abstract class GameScene extends Phaser.Scene {
     this.uiManager?.resumeTimer();
     this.physics.resume();
     this.tweens.resumeAll();
+    this.ghostReplayManager?.destroy();
+    this.ghostReplayManager = null;
+    soundManager.stopAmbientMusic();
     this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.time.delayedCall(260, () => {
-      this.scene.restart();
-    });
+    this.time.delayedCall(260, () => this.scene.restart());
   }
 
   private goToMenu() {
@@ -565,16 +749,20 @@ export abstract class GameScene extends Phaser.Scene {
     this.uiManager?.resumeTimer();
     this.physics.resume();
     this.tweens.resumeAll();
+    this.ghostReplayManager?.destroy();
+    this.ghostReplayManager = null;
+    soundManager.stopAmbientMusic();
     this.cameras.main.fadeOut(250, 0, 0, 0);
-    this.time.delayedCall(260, () => {
-      this.scene.start("MenuScene");
-    });
+    this.time.delayedCall(260, () => this.scene.start("MenuScene"));
   }
 
-  private handleLevelComplete() {
+  protected handleLevelComplete() {
     if (this.levelComplete) return;
     this.levelComplete = true;
     soundManager.levelComplete();
+    soundManager.stopAmbientMusic();
+    this.ghostReplayManager?.destroy();
+    this.ghostReplayManager = null;
 
     this.cameras.main.flash(400, 255, 255, 100);
 
@@ -587,6 +775,7 @@ export abstract class GameScene extends Phaser.Scene {
         cumulativeTimeMs: this.cumulativeTimeMs + elapsed,
         nextScene: this.nextScene,
         crystals: this.crystalsCollected,
+        difficulty: this.difficultyKey,
       });
     });
   }
@@ -595,6 +784,9 @@ export abstract class GameScene extends Phaser.Scene {
     if (this.gameOver) return;
     this.gameOver = true;
     soundManager.gameOver();
+    soundManager.stopAmbientMusic();
+    this.ghostReplayManager?.destroy();
+    this.ghostReplayManager = null;
 
     this.cameras.main.shake(300, 0.015);
     this.cameras.main.fade(800, 0, 0, 0);
@@ -607,13 +799,17 @@ export abstract class GameScene extends Phaser.Scene {
     });
   }
 
-  update(time: number, delta: number) {
+  update(_time: number, delta: number) {
     if (this.gameOver || this.levelComplete || this.paused) return;
 
     this.timeManager.update(delta);
     this.player.update();
 
-    // Update all collectibles and check collection via distance
+    // Ghost replay
+    this.ghostReplayManager?.recordFrame(this.player);
+    this.ghostReplayManager?.updatePlayback();
+
+    // Collectibles
     for (let i = this.collectibles.length - 1; i >= 0; i--) {
       const c = this.collectibles[i];
       if (!c.active) {
@@ -621,33 +817,50 @@ export abstract class GameScene extends Phaser.Scene {
         continue;
       }
       c.update();
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, c.x, c.y);
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        c.x,
+        c.y
+      );
       if (dist < 30) {
-        if (c.collectibleType === "crystal") {
-          const idx = (c as Collectible & { crystalIndex?: number }).crystalIndex ?? -1;
+        const type = c.collectibleType;
+        if (type === "crystal") {
+          const idx =
+            (c as Collectible & { crystalIndex?: number }).crystalIndex ?? -1;
           this.uiManager?.markCrystalCollected(idx);
           this.crystalsCollected++;
-          this.player.addScore(100);
+          this.player.addScore(
+            Math.round(100 * DIFFICULTY[this.difficultyKey].scoreBonus)
+          );
           if (this.crystalsCollected >= this.totalCrystals) {
             this.uiManager?.showCrystalsComplete();
             soundManager.allCrystals();
+          } else {
+            soundManager.crystalCollect();
           }
-        } else if (c.collectibleType === "shard") {
-          this.player.addScore(50);
-        } else if (c.collectibleType === "health") {
-          if (this.player.health < 3) this.player.health++;
+        } else if (type === "shard") {
+          this.player.addScore(
+            Math.round(50 * DIFFICULTY[this.difficultyKey].scoreBonus)
+          );
+          soundManager.shardCollect();
+        } else if (type === "health") {
+          if (this.player.health < this.player.maxHealth) {
+            this.player.health++;
+          }
+          soundManager.healthCollect();
         }
         c.collect();
         this.collectibles.splice(i, 1);
       }
     }
 
-    // Update enemies
+    // Enemies
     for (const e of this.enemyList) {
       if (e.active) e.update(delta);
     }
 
-    // Update projectiles
+    // Projectiles
     this.projectiles.getChildren().forEach((p) => {
       const proj = p as Projectile;
       if (proj.active) proj.update(delta);
@@ -659,17 +872,15 @@ export abstract class GameScene extends Phaser.Scene {
       this.crystalsCollected,
       this.totalCrystals,
       this.player.x,
-      this.player.y
+      this.player.y,
+      this.player.dashCooldownRemaining,
+      this.player.dashActive
     );
   }
 
   shutdown() {
     this.timeManager?.destroy();
+    this.ghostReplayManager?.destroy();
+    this.ghostReplayManager = null;
   }
-}
-
-interface CollapseData {
-  originalX: number;
-  originalY: number;
-  triggered: boolean;
 }

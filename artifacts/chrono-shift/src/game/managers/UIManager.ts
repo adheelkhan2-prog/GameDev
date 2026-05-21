@@ -4,8 +4,10 @@ import {
   TIME_SLOW_DURATION,
   TIME_SLOW_COOLDOWN,
   TIME_REWIND_COOLDOWN,
+  DASH_COOLDOWN,
   COLORS,
 } from "../constants";
+import type { UnlockedAbilities } from "../utils/settings";
 
 interface MiniMapConfig {
   worldWidth: number;
@@ -23,6 +25,8 @@ const MAP_PAD = 8;
 export class UIManager {
   private scene: Phaser.Scene;
   private timeManager: TimeManager;
+  private abilities: UnlockedAbilities;
+  private maxHealth: number;
 
   private levelText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
@@ -38,9 +42,14 @@ export class UIManager {
   private rewindBar!: Phaser.GameObjects.Graphics;
   private rewindStatus!: Phaser.GameObjects.Text;
 
+  private dashLabel: Phaser.GameObjects.Text | null = null;
+  private dashBar: Phaser.GameObjects.Graphics | null = null;
+  private dashStatus: Phaser.GameObjects.Text | null = null;
+
+  private abilityIcons: Phaser.GameObjects.Text | null = null;
+
   private damageFlash!: Phaser.GameObjects.Rectangle;
 
-  // Mini-map
   private mapBg!: Phaser.GameObjects.Graphics;
   private mapGfx!: Phaser.GameObjects.Graphics;
   private mapLabel!: Phaser.GameObjects.Text;
@@ -58,10 +67,18 @@ export class UIManager {
   private totalPausedMs = 0;
   private levelNumber = 1;
 
-  constructor(scene: Phaser.Scene, timeManager: TimeManager, levelNumber = 1) {
+  constructor(
+    scene: Phaser.Scene,
+    timeManager: TimeManager,
+    levelNumber = 1,
+    abilities: UnlockedAbilities = { doubleJump: false, dash: false, wallClimb: false },
+    maxHealth = 3
+  ) {
     this.scene = scene;
     this.timeManager = timeManager;
     this.levelNumber = levelNumber;
+    this.abilities = abilities;
+    this.maxHealth = maxHealth;
     this.startTime = scene.time.now;
     this.create();
   }
@@ -81,6 +98,10 @@ export class UIManager {
     const W = this.scene.scale.width;
     const H = this.scene.scale.height;
 
+    const anyAbility = this.abilities.doubleJump || this.abilities.dash || this.abilities.wallClimb;
+    const extraRows = (this.abilities.dash ? 1 : 0) + (anyAbility && !this.abilities.dash ? 0 : 0);
+    const panelH = 90 + (this.abilities.dash ? 30 : 0) + (anyAbility ? 24 : 0);
+
     // ── Top-left panel ──
     const panelBg = this.scene.add.graphics();
     panelBg.fillStyle(0x000000, 0.55);
@@ -95,8 +116,7 @@ export class UIManager {
         stroke: "#003322",
         strokeThickness: 2,
       })
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
 
     this.scoreText = this.scene.add
       .text(16, 36, "SCORE: 0", {
@@ -104,14 +124,13 @@ export class UIManager {
         fontFamily: "monospace",
         color: "#ffee44",
       })
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
 
     this.healthContainer = this.scene.add
       .container(16, 60)
       .setDepth(91)
       .setScrollFactor(0) as Phaser.GameObjects.Container;
-    this.updateHearts(3);
+    this.updateHearts(this.maxHealth);
 
     // ── Top-right panel ──
     const panelBg2 = this.scene.add.graphics();
@@ -125,8 +144,7 @@ export class UIManager {
         fontFamily: "monospace",
         color: "#ffd700",
       })
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
 
     this.timerText = this.scene.add
       .text(W - 152, 34, "TIME: 0:00", {
@@ -134,62 +152,98 @@ export class UIManager {
         fontFamily: "monospace",
         color: "#aaccff",
       })
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
 
     // ── Bottom-left ability bars ──
     const abilityBg = this.scene.add.graphics();
     abilityBg.fillStyle(0x000000, 0.6);
-    abilityBg.fillRoundedRect(6, H - 86, 220, 80, 8);
+    abilityBg.fillRoundedRect(6, H - panelH - 6, 224, panelH, 8);
     abilityBg.setDepth(90).setScrollFactor(0);
 
+    let rowY = H - panelH + 4;
+
     this.slowLabel = this.scene.add
-      .text(14, H - 79, "[E] TIME SLOW", {
-        fontSize: "13px",
-        fontFamily: "monospace",
-        color: "#66aaff",
+      .text(14, rowY, "[E] TIME SLOW", {
+        fontSize: "13px", fontFamily: "monospace", color: "#66aaff",
       })
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
 
     this.slowBar = this.scene.add.graphics();
     this.slowBar.setDepth(91).setScrollFactor(0);
 
     this.slowStatus = this.scene.add
-      .text(14, H - 63, "READY", {
-        fontSize: "11px",
-        fontFamily: "monospace",
-        color: "#44ff88",
+      .text(14, rowY + 16, "READY", {
+        fontSize: "11px", fontFamily: "monospace", color: "#44ff88",
       })
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
+
+    rowY += 34;
 
     this.rewindLabel = this.scene.add
-      .text(14, H - 47, "[R] TIME REWIND", {
-        fontSize: "13px",
-        fontFamily: "monospace",
-        color: "#ff88aa",
+      .text(14, rowY, "[R] TIME REWIND", {
+        fontSize: "13px", fontFamily: "monospace", color: "#ff88aa",
       })
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
 
     this.rewindBar = this.scene.add.graphics();
     this.rewindBar.setDepth(91).setScrollFactor(0);
 
     this.rewindStatus = this.scene.add
-      .text(14, H - 31, "READY", {
-        fontSize: "11px",
-        fontFamily: "monospace",
-        color: "#44ff88",
+      .text(14, rowY + 16, "READY", {
+        fontSize: "11px", fontFamily: "monospace", color: "#44ff88",
       })
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
 
-    // ── Damage flash ──
+    rowY += 34;
+
+    // Dash row (if unlocked)
+    if (this.abilities.dash) {
+      this.dashLabel = this.scene.add
+        .text(14, rowY, "[Q] DASH", {
+          fontSize: "13px", fontFamily: "monospace", color: "#ffaa44",
+        })
+        .setDepth(91).setScrollFactor(0);
+
+      this.dashBar = this.scene.add.graphics();
+      this.dashBar.setDepth(91).setScrollFactor(0);
+
+      this.dashStatus = this.scene.add
+        .text(14, rowY + 16, "READY", {
+          fontSize: "11px", fontFamily: "monospace", color: "#44ff88",
+        })
+        .setDepth(91).setScrollFactor(0);
+
+      rowY += 34;
+    }
+
+    // Ability icons row
+    if (anyAbility && !this.abilities.dash) {
+      const parts: string[] = [];
+      if (this.abilities.doubleJump) parts.push("DBL JUMP");
+      if (this.abilities.wallClimb) parts.push("WALL CLIMB");
+      this.abilityIcons = this.scene.add
+        .text(14, rowY, parts.join("  •  "), {
+          fontSize: "10px", fontFamily: "monospace", color: "#aaaacc",
+        })
+        .setDepth(91).setScrollFactor(0);
+    } else if (anyAbility) {
+      const parts: string[] = [];
+      if (this.abilities.doubleJump) parts.push("DBL↑");
+      if (this.abilities.wallClimb) parts.push("WALL");
+      if (parts.length > 0) {
+        this.abilityIcons = this.scene.add
+          .text(14, rowY, parts.join("  "), {
+            fontSize: "10px", fontFamily: "monospace", color: "#aaaacc",
+          })
+          .setDepth(91).setScrollFactor(0);
+      }
+    }
+
+    // ── Damage flash overlay ──
     this.damageFlash = this.scene.add.rectangle(W / 2, H / 2, W, H, 0xff0000, 0);
     this.damageFlash.setDepth(95).setScrollFactor(0);
 
-    // ── Mini-map placeholder (bottom-right, built after initMiniMap) ──
+    // ── Mini-map (bottom-right) ──
     this.mapX = W - MAP_W - MAP_PAD;
     this.mapY = H - MAP_H - MAP_PAD;
 
@@ -201,13 +255,10 @@ export class UIManager {
 
     this.mapLabel = this.scene.add
       .text(this.mapX + MAP_W / 2, this.mapY - 12, "MAP", {
-        fontSize: "10px",
-        fontFamily: "monospace",
-        color: "#445566",
+        fontSize: "10px", fontFamily: "monospace", color: "#445566",
       })
       .setOrigin(0.5, 1)
-      .setDepth(91)
-      .setScrollFactor(0);
+      .setDepth(91).setScrollFactor(0);
   }
 
   initMiniMap(config: MiniMapConfig) {
@@ -216,14 +267,11 @@ export class UIManager {
     this.mapScaleX = MAP_W / config.worldWidth;
     this.mapScaleY = MAP_H / config.worldHeight;
 
-    // Draw static background + border + platforms once
     this.mapBg.clear();
     this.mapBg.fillStyle(0x000000, 0.7);
     this.mapBg.fillRoundedRect(this.mapX - 1, this.mapY - 1, MAP_W + 2, MAP_H + 2, 4);
     this.mapBg.lineStyle(1, 0x334455, 0.9);
     this.mapBg.strokeRoundedRect(this.mapX - 1, this.mapY - 1, MAP_W + 2, MAP_H + 2, 4);
-
-    // Draw platforms as subtle grey fills
     this.mapBg.fillStyle(0x223344, 0.9);
     for (const p of config.platforms) {
       const px = this.mapX + p.x * this.mapScaleX;
@@ -233,7 +281,6 @@ export class UIManager {
       this.mapBg.fillRect(px, py - ph / 2, pw, ph + 1);
     }
 
-    // Start exit pulse tween
     const obj = { v: 1 };
     this.exitPulseTween = this.scene.tweens.add({
       targets: obj,
@@ -243,7 +290,6 @@ export class UIManager {
       repeat: -1,
       onUpdate: () => { this.exitPulse = obj.v; },
     });
-
     this.mapLabel.setText("MAP");
     this.mapLabel.setColor("#667788");
   }
@@ -255,18 +301,13 @@ export class UIManager {
   private drawMiniMap(playerX: number, playerY: number) {
     const cfg = this.mapConfig;
     if (!cfg) return;
-
     this.mapGfx.clear();
-
-    // Exit dot — pulsing green
     const ex = this.mapX + cfg.exitX * this.mapScaleX;
     const ey = this.mapY + cfg.exitY * this.mapScaleY;
     this.mapGfx.fillStyle(0x00ff88, this.exitPulse);
     this.mapGfx.fillCircle(ex, ey, 3);
     this.mapGfx.lineStyle(1, 0x00ff88, this.exitPulse * 0.5);
     this.mapGfx.strokeCircle(ex, ey, 5);
-
-    // Crystal dots — gold, hidden if collected
     for (let i = 0; i < cfg.crystals.length; i++) {
       if (this.collectedCrystals.has(i)) continue;
       const cx = this.mapX + cfg.crystals[i].x * this.mapScaleX;
@@ -274,24 +315,12 @@ export class UIManager {
       this.mapGfx.fillStyle(0xffd700, 1);
       this.mapGfx.fillCircle(cx, cy, 2.5);
     }
-
-    // Player dot — bright cyan with glow ring
-    const px = Phaser.Math.Clamp(
-      this.mapX + playerX * this.mapScaleX,
-      this.mapX + 2,
-      this.mapX + MAP_W - 2
-    );
-    const py = Phaser.Math.Clamp(
-      this.mapY + playerY * this.mapScaleY,
-      this.mapY + 2,
-      this.mapY + MAP_H - 2
-    );
+    const px = Phaser.Math.Clamp(this.mapX + playerX * this.mapScaleX, this.mapX + 2, this.mapX + MAP_W - 2);
+    const py = Phaser.Math.Clamp(this.mapY + playerY * this.mapScaleY, this.mapY + 2, this.mapY + MAP_H - 2);
     this.mapGfx.lineStyle(1, 0x00ffff, 0.35);
     this.mapGfx.strokeCircle(px, py, 5);
     this.mapGfx.fillStyle(0x00ffff, 1);
     this.mapGfx.fillCircle(px, py, 3);
-
-    // Viewport rectangle showing what the camera currently sees
     const cam = this.scene.cameras.main;
     const vx = this.mapX + cam.scrollX * this.mapScaleX;
     const vy = this.mapY + cam.scrollY * this.mapScaleY;
@@ -303,19 +332,28 @@ export class UIManager {
 
   private updateHearts(health: number) {
     this.healthContainer.removeAll(true);
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < this.maxHealth; i++) {
       const color = i < health ? 0xff3355 : 0x333344;
       const heart = this.scene.add.graphics();
       heart.fillStyle(color, 1);
       heart.fillCircle(5, 5, 5);
       heart.fillCircle(13, 5, 5);
       heart.fillTriangle(0, 7, 18, 7, 9, 18);
-      heart.x = i * 24;
+      heart.x = i * 22;
       this.healthContainer.add(heart);
     }
   }
 
-  update(score: number, health: number, crystals: number, totalCrystals: number, playerX = 0, playerY = 0) {
+  update(
+    score: number,
+    health: number,
+    crystals: number,
+    totalCrystals: number,
+    playerX = 0,
+    playerY = 0,
+    dashCooldownRemaining = 0,
+    dashActive = false
+  ) {
     const elapsed = this.scene.time.now - this.startTime - this.totalPausedMs;
     const secs = Math.floor(elapsed / 1000);
     const m = Math.floor(secs / 60);
@@ -326,23 +364,23 @@ export class UIManager {
     this.crystalText.setText(`CRYSTALS: ${crystals}/${totalCrystals}`);
     this.timerText.setText(`TIME: ${timeStr}`);
     this.updateHearts(health);
-    this.updateAbilityBars();
+    this.updateAbilityBars(dashCooldownRemaining, dashActive);
     this.drawMiniMap(playerX, playerY);
   }
 
-  private updateAbilityBars() {
+  private updateAbilityBars(dashCooldownRemaining = 0, dashActive = false) {
     const H = this.scene.scale.height;
+    const anyAbility = this.abilities.doubleJump || this.abilities.dash || this.abilities.wallClimb;
+    const panelH = 90 + (this.abilities.dash ? 30 : 0) + (anyAbility ? 24 : 0);
+    const rowY0 = H - panelH + 4;
     const barW = 155;
     const barH = 5;
 
+    // Slow bar
     this.slowBar.clear();
     this.slowBar.fillStyle(0x223355, 1);
-    this.slowBar.fillRect(55, H - 64, barW, barH);
-
-    let slowFill = 0;
-    let slowColor = 0x44ff88;
-    let slowStatusText = "READY";
-
+    this.slowBar.fillRect(56, rowY0 + 16, barW, barH);
+    let slowFill = 0, slowColor = 0x44ff88, slowStatusText = "READY";
     if (this.timeManager.slowActive) {
       slowFill = this.timeManager.slowTimeRemaining / TIME_SLOW_DURATION;
       slowColor = 0x4466ff;
@@ -354,27 +392,23 @@ export class UIManager {
     } else {
       slowFill = 1;
     }
-
     this.slowBar.fillStyle(slowColor, 1);
-    this.slowBar.fillRect(55, H - 64, barW * slowFill, barH);
+    this.slowBar.fillRect(56, rowY0 + 16, barW * slowFill, barH);
+    this.slowStatus.setPosition(14, rowY0 + 16);
     this.slowStatus.setText(slowStatusText);
     this.slowStatus.setColor(
       this.timeManager.slowReady && !this.timeManager.slowActive ? "#44ff88" :
       this.timeManager.slowActive ? "#8899ff" : "#ff8844"
     );
 
+    const rowY1 = rowY0 + 34;
+    // Rewind bar
     this.rewindBar.clear();
     this.rewindBar.fillStyle(0x223355, 1);
-    this.rewindBar.fillRect(72, H - 32, barW, barH);
-
-    let rewindFill = 0;
-    let rewindColor = 0x44ff88;
-    let rewindStatusText = "READY";
-
+    this.rewindBar.fillRect(73, rowY1 + 16, barW, barH);
+    let rewindFill = 0, rewindColor = 0x44ff88, rewindStatusText = "READY";
     if (this.timeManager.rewindActive) {
-      rewindFill = 1;
-      rewindColor = 0xff44aa;
-      rewindStatusText = "REWINDING...";
+      rewindFill = 1; rewindColor = 0xff44aa; rewindStatusText = "REWINDING...";
     } else if (!this.timeManager.rewindReady) {
       rewindFill = 1 - this.timeManager.rewindCooldownRemaining / TIME_REWIND_COOLDOWN;
       rewindColor = 0xff6600;
@@ -382,30 +416,54 @@ export class UIManager {
     } else {
       rewindFill = 1;
     }
-
     this.rewindBar.fillStyle(rewindColor, 1);
-    this.rewindBar.fillRect(72, H - 32, barW * rewindFill, barH);
+    this.rewindBar.fillRect(73, rowY1 + 16, barW * rewindFill, barH);
+    this.rewindStatus.setPosition(14, rowY1 + 16);
     this.rewindStatus.setText(rewindStatusText);
     this.rewindStatus.setColor(
       this.timeManager.rewindReady && !this.timeManager.rewindActive ? "#44ff88" :
       this.timeManager.rewindActive ? "#ff88cc" : "#ff8844"
     );
+
+    // Dash bar (if unlocked)
+    if (this.abilities.dash && this.dashBar && this.dashStatus && this.dashLabel) {
+      const rowY2 = rowY1 + 34;
+      this.dashLabel.setPosition(14, rowY2);
+      this.dashBar.clear();
+      this.dashBar.fillStyle(0x223355, 1);
+      this.dashBar.fillRect(46, rowY2 + 16, barW, barH);
+      let dashFill = 0, dashColor = 0x44ff88, dashStatusText = "READY";
+      if (dashActive) {
+        dashFill = 1; dashColor = 0xffaa00; dashStatusText = "DASHING!";
+      } else if (dashCooldownRemaining > 0) {
+        dashFill = 1 - dashCooldownRemaining / DASH_COOLDOWN;
+        dashColor = 0xff6600;
+        dashStatusText = `CD ${Math.ceil(dashCooldownRemaining / 1000)}s`;
+      } else {
+        dashFill = 1;
+      }
+      this.dashBar.fillStyle(dashColor, 1);
+      this.dashBar.fillRect(46, rowY2 + 16, barW * dashFill, barH);
+      this.dashStatus.setPosition(14, rowY2 + 16);
+      this.dashStatus.setText(dashStatusText);
+      this.dashStatus.setColor(dashFill >= 1 && !dashActive ? "#44ff88" : dashActive ? "#ffcc44" : "#ff8844");
+    }
   }
 
   flashDamage() {
     this.scene.tweens.add({
       targets: this.damageFlash,
-      alpha: { from: 0.35, to: 0 },
+      alpha: { from: 0.38, to: 0 },
       duration: 400,
       ease: "Power2",
     });
-    this.scene.cameras.main.shake(180, 0.008);
+    this.scene.cameras.main.shake(190, 0.009);
   }
 
   showCrystalsComplete() {
     const W = this.scene.scale.width;
     const banner = this.scene.add
-      .text(W / 2, 80, "ALL CRYSTALS COLLECTED! Reach the exit!", {
+      .text(W / 2, 80, "ALL CRYSTALS! Reach the exit!", {
         fontSize: "20px",
         fontFamily: "monospace",
         color: "#ffd700",
@@ -414,9 +472,7 @@ export class UIManager {
         backgroundColor: "#000000aa",
         padding: { x: 12, y: 6 },
       })
-      .setOrigin(0.5)
-      .setDepth(92)
-      .setScrollFactor(0);
+      .setOrigin(0.5).setDepth(92).setScrollFactor(0);
 
     this.scene.time.delayedCall(3000, () => {
       this.scene.tweens.add({
@@ -425,6 +481,29 @@ export class UIManager {
         duration: 600,
         onComplete: () => banner.destroy(),
       });
+    });
+  }
+
+  showBossDefeated() {
+    const W = this.scene.scale.width;
+    const banner = this.scene.add
+      .text(W / 2, 80, "BOSS DEFEATED! Enter the portal!", {
+        fontSize: "22px",
+        fontFamily: "monospace",
+        color: "#ff8800",
+        stroke: "#550000",
+        strokeThickness: 3,
+        backgroundColor: "#000000cc",
+        padding: { x: 14, y: 8 },
+      })
+      .setOrigin(0.5).setDepth(92).setScrollFactor(0);
+
+    this.scene.tweens.add({
+      targets: banner,
+      scaleX: { from: 0.8, to: 1 },
+      scaleY: { from: 0.8, to: 1 },
+      duration: 300,
+      ease: "Back.easeOut",
     });
   }
 

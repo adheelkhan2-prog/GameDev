@@ -14,12 +14,34 @@ export const TIME_REWIND_HISTORY = 120;
 export const CRYSTALS_PER_LEVEL = 5;
 
 export const DRONE_SPEED = 80;
+export const CHASER_SPEED = 115;
+export const CHASER_AGGRO_RANGE = 380;
 export const PHASE_SHIFTER_TELEPORT_INTERVAL = 2500;
 export const PULSAR_FIRE_INTERVAL = 2000;
 export const PROJECTILE_SPEED = 280;
 
 export const COLLAPSE_DELAY = 3000;
 export const COLLAPSE_RESPAWN = 5000;
+
+export const DASH_SPEED = 560;
+export const DASH_DURATION = 190;
+export const DASH_COOLDOWN = 2200;
+export const DOUBLE_JUMP_VELOCITY = -460;
+export const WALL_JUMP_VX = 270;
+export const WALL_JUMP_VY = -490;
+
+export const BOSS_MAX_HP = 15;
+export const BOSS_SPEED = 95;
+export const BOSS_CHARGE_SPEED = 330;
+export const BOSS_FIRE_INTERVAL = 1800;
+
+export const DIFFICULTY = {
+  easy:   { enemySpeed: 0.65, playerHealth: 5, scoreBonus: 0.7  },
+  normal: { enemySpeed: 1.0,  playerHealth: 3, scoreBonus: 1.0  },
+  hard:   { enemySpeed: 1.4,  playerHealth: 2, scoreBonus: 1.5  },
+} as const;
+
+export type DifficultyKey = keyof typeof DIFFICULTY;
 
 export const COLORS = {
   PLAYER: 0x00ffff,
@@ -32,6 +54,7 @@ export const COLORS = {
   SHARD: 0x8866ff,
   HEALTH_PICKUP: 0xff4466,
   DRONE: 0xcc2200,
+  CHASER: 0xff2266,
   PHASE_SHIFTER: 0xff6600,
   PULSAR: 0xff3300,
   PROJECTILE: 0xff8800,
@@ -45,4 +68,12 @@ export const COLORS = {
   UI_TEXT: 0xffffff,
   UI_BG: 0x000000,
   STAR: 0x334455,
+  BOSS: 0xdd0022,
+  BOSS_GLOW: 0xff4400,
+  RUINS_PLATFORM: 0x6b4226,
+  RUINS_LIGHT: 0x8b6240,
+  RUINS_GROUND: 0x3d2010,
+  FUTURE_PLATFORM: 0x1a3a6b,
+  FUTURE_LIGHT: 0x2a5aab,
+  FUTURE_GROUND: 0x0d1f3d,
 };

@@ -8,7 +8,7 @@ export class Level3Scene extends GameScene {
   protected spawnY = 570;
   protected exitX = 3700;
   protected exitY = 540;
-  protected nextScene = "VictoryScene";
+  protected nextScene = "Level4Scene";
 
   constructor() {
     super("Level3Scene");
