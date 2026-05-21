@@ -63,6 +63,10 @@ export abstract class GameScene extends Phaser.Scene {
   protected totalCrystals = CRYSTALS_PER_LEVEL;
   protected levelComplete = false;
   protected gameOver = false;
+  protected paused = false;
+
+  private pauseContainer!: Phaser.GameObjects.Container;
+  private keyEsc!: Phaser.Input.Keyboard.Key;
 
   protected abstract levelNumber: number;
   protected abstract worldWidth: number;
@@ -104,6 +108,13 @@ export abstract class GameScene extends Phaser.Scene {
     this.setupCamera();
 
     this.uiManager = new UIManager(this, this.timeManager, this.levelNumber);
+
+    // Pause key
+    this.keyEsc = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    this.input.keyboard!.on("keydown-ESC", () => this.togglePause());
+
+    this.pauseContainer = this.add.container(0, 0).setDepth(200).setScrollFactor(0).setVisible(false) as Phaser.GameObjects.Container;
+    this.buildPauseMenu();
 
     // Build crystal position list (in-order) for the mini-map
     const crystalDefs = this.buildCollectibles()
@@ -380,6 +391,164 @@ export abstract class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(COLORS.BG2);
   }
 
+  private buildPauseMenu() {
+    const W = this.scale.width;
+    const H = this.scale.height;
+    const cx = W / 2;
+    const cy = H / 2;
+
+    // Dark overlay
+    const overlay = this.add.rectangle(cx, cy, W, H, 0x000000, 0.72).setInteractive();
+    this.pauseContainer.add(overlay);
+
+    // Panel
+    const panel = this.add.graphics();
+    panel.fillStyle(0x001a33, 0.97);
+    panel.fillRoundedRect(cx - 200, cy - 200, 400, 400, 16);
+    panel.lineStyle(2, 0x00ffcc, 0.6);
+    panel.strokeRoundedRect(cx - 200, cy - 200, 400, 400, 16);
+    this.pauseContainer.add(panel);
+
+    // Decorative corner accents
+    const acc = this.add.graphics();
+    acc.lineStyle(2, 0x00ffcc, 0.3);
+    acc.lineBetween(cx - 200, cy - 200, cx - 160, cy - 200);
+    acc.lineBetween(cx - 200, cy - 200, cx - 200, cy - 160);
+    acc.lineBetween(cx + 200, cy - 200, cx + 160, cy - 200);
+    acc.lineBetween(cx + 200, cy - 200, cx + 200, cy - 160);
+    acc.lineBetween(cx - 200, cy + 200, cx - 160, cy + 200);
+    acc.lineBetween(cx - 200, cy + 200, cx - 200, cy + 160);
+    acc.lineBetween(cx + 200, cy + 200, cx + 160, cy + 200);
+    acc.lineBetween(cx + 200, cy + 200, cx + 200, cy + 160);
+    this.pauseContainer.add(acc);
+
+    // Title
+    const title = this.add.text(cx, cy - 155, "PAUSED", {
+      fontSize: "42px",
+      fontFamily: "monospace",
+      color: "#00ffcc",
+      stroke: "#003322",
+      strokeThickness: 4,
+      shadow: { offsetX: 0, offsetY: 0, color: "#00ffcc", blur: 14, fill: true },
+    }).setOrigin(0.5);
+    this.pauseContainer.add(title);
+
+    // Divider
+    const div = this.add.graphics();
+    div.lineStyle(1, 0x00ffcc, 0.3);
+    div.lineBetween(cx - 150, cy - 108, cx + 150, cy - 108);
+    this.pauseContainer.add(div);
+
+    // Level & score info
+    const infoText = this.add.text(cx, cy - 80, `LEVEL ${this.levelNumber}`, {
+      fontSize: "16px",
+      fontFamily: "monospace",
+      color: "#446677",
+    }).setOrigin(0.5);
+    this.pauseContainer.add(infoText);
+
+    // Buttons
+    const btnDefs = [
+      { label: "▶  RESUME",        color: "#00ff88", dy: -20,  action: () => this.togglePause() },
+      { label: "↺  RESTART LEVEL", color: "#ffee44", dy: 55,   action: () => this.restartLevel() },
+      { label: "⌂  MAIN MENU",     color: "#aaaaff", dy: 130,  action: () => this.goToMenu() },
+    ];
+
+    for (const def of btnDefs) {
+      const by = cy + def.dy;
+
+      const bg = this.add.graphics();
+      bg.fillStyle(0x001122, 0.85);
+      bg.fillRoundedRect(cx - 155, by - 24, 310, 48, 8);
+      bg.lineStyle(2, Phaser.Display.Color.HexStringToColor(def.color).color, 0.55);
+      bg.strokeRoundedRect(cx - 155, by - 24, 310, 48, 8);
+      this.pauseContainer.add(bg);
+
+      const btn = this.add.text(cx, by, def.label, {
+        fontSize: "22px",
+        fontFamily: "monospace",
+        color: def.color,
+        stroke: "#000000",
+        strokeThickness: 2,
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+      btn.on("pointerover", () => {
+        btn.setScale(1.07);
+        bg.clear();
+        bg.fillStyle(0x002244, 0.95);
+        bg.fillRoundedRect(cx - 155, by - 24, 310, 48, 8);
+        bg.lineStyle(2, Phaser.Display.Color.HexStringToColor(def.color).color, 1);
+        bg.strokeRoundedRect(cx - 155, by - 24, 310, 48, 8);
+      });
+      btn.on("pointerout", () => {
+        btn.setScale(1);
+        bg.clear();
+        bg.fillStyle(0x001122, 0.85);
+        bg.fillRoundedRect(cx - 155, by - 24, 310, 48, 8);
+        bg.lineStyle(2, Phaser.Display.Color.HexStringToColor(def.color).color, 0.55);
+        bg.strokeRoundedRect(cx - 155, by - 24, 310, 48, 8);
+      });
+      btn.on("pointerdown", def.action);
+      this.pauseContainer.add(btn);
+    }
+
+    // ESC hint at bottom
+    const hint = this.add.text(cx, cy + 175, "Press ESC to resume", {
+      fontSize: "13px",
+      fontFamily: "monospace",
+      color: "#334455",
+    }).setOrigin(0.5);
+    this.pauseContainer.add(hint);
+  }
+
+  private togglePause() {
+    if (this.gameOver || this.levelComplete) return;
+
+    this.paused = !this.paused;
+
+    if (this.paused) {
+      this.physics.pause();
+      this.tweens.pauseAll();
+      this.pauseContainer.setVisible(true);
+      this.tweens.add({
+        targets: this.pauseContainer,
+        alpha: { from: 0, to: 1 },
+        duration: 150,
+      });
+    } else {
+      this.tweens.add({
+        targets: this.pauseContainer,
+        alpha: { from: 1, to: 0 },
+        duration: 120,
+        onComplete: () => {
+          this.pauseContainer.setVisible(false);
+          this.physics.resume();
+          this.tweens.resumeAll();
+        },
+      });
+    }
+  }
+
+  private restartLevel() {
+    this.paused = false;
+    this.physics.resume();
+    this.tweens.resumeAll();
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.time.delayedCall(260, () => {
+      this.scene.restart();
+    });
+  }
+
+  private goToMenu() {
+    this.paused = false;
+    this.physics.resume();
+    this.tweens.resumeAll();
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.time.delayedCall(260, () => {
+      this.scene.start("MenuScene");
+    });
+  }
+
   private handleLevelComplete() {
     if (this.levelComplete) return;
     this.levelComplete = true;
@@ -414,7 +583,7 @@ export abstract class GameScene extends Phaser.Scene {
   }
 
   update(time: number, delta: number) {
-    if (this.gameOver || this.levelComplete) return;
+    if (this.gameOver || this.levelComplete || this.paused) return;
 
     this.timeManager.update(delta);
     this.player.update();
