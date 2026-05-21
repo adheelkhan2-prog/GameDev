@@ -216,12 +216,17 @@ export class MenuScene extends Phaser.Scene {
 
     const scores = getScores();
 
-    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.88).setDepth(50).setInteractive();
-    const panel = this.add.graphics();
     const panelW = 700;
     const panelH = 560;
     const px = W / 2 - panelW / 2;
     const py = H / 2 - panelH / 2;
+
+    // Dim overlay — only closes when clicking OUTSIDE the panel
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.88)
+      .setDepth(50)
+      .setInteractive();
+
+    const panel = this.add.graphics();
     panel.fillStyle(0x0a0f1a, 0.98);
     panel.fillRoundedRect(px, py, panelW, panelH, 16);
     panel.lineStyle(2, 0xffd700, 0.7);
@@ -230,25 +235,44 @@ export class MenuScene extends Phaser.Scene {
 
     const allObjs: Phaser.GameObjects.GameObject[] = [overlay, panel];
 
+    const closeAll = () => allObjs.forEach((o) => { if (o.active) o.destroy(); });
+
     const addText = (x: number, y: number, text: string, style: Phaser.Types.GameObjects.Text.TextStyle) => {
       const t = this.add.text(x, y, text, style).setDepth(52);
       allObjs.push(t);
       return t;
     };
 
+    // Title
     addText(W / 2, py + 36, "HIGH SCORES", {
       fontSize: "32px", fontFamily: "monospace", color: "#ffd700",
       stroke: "#553300", strokeThickness: 3,
       shadow: { offsetX: 0, offsetY: 0, color: "#ffaa00", blur: 12, fill: true },
     }).setOrigin(0.5);
 
+    // ✕ Close button (top-right of panel)
+    const closeBtnBg = this.add.graphics().setDepth(52);
+    closeBtnBg.fillStyle(0x220000, 0.85);
+    closeBtnBg.fillRoundedRect(px + panelW - 46, py + 10, 36, 30, 6);
+    allObjs.push(closeBtnBg);
+
+    const closeBtn = addText(px + panelW - 28, py + 25, "✕", {
+      fontSize: "20px", fontFamily: "monospace", color: "#885555",
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    closeBtn.on("pointerover", () => closeBtn.setColor("#ff6666"));
+    closeBtn.on("pointerout", () => closeBtn.setColor("#885555"));
+    closeBtn.on("pointerdown", (p: Phaser.Input.Pointer, lx: number, ly: number, e: Event) => {
+      e.stopPropagation();
+      closeAll();
+    });
+
     // Column headers
     const headerY = py + 86;
-    addText(px + 56, headerY, "#", { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 56,  headerY, "#",     { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
     addText(px + 180, headerY, "SCORE", { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
-    addText(px + 320, headerY, "TIME", { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
-    addText(px + 480, headerY, "RANK", { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
-    addText(px + 630, headerY, "DATE", { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 320, headerY, "TIME",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 480, headerY, "RANK",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 630, headerY, "DATE",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
 
     // Divider
     const div = this.add.graphics().setDepth(52);
@@ -257,24 +281,23 @@ export class MenuScene extends Phaser.Scene {
     allObjs.push(div);
 
     if (scores.length === 0) {
-      addText(W / 2, H / 2 + 20, "No scores yet — complete the game to appear here!", {
+      addText(W / 2, H / 2 + 20, "No scores yet — complete all 3 levels to appear here!", {
         fontSize: "16px", fontFamily: "monospace", color: "#445566",
       }).setOrigin(0.5);
     } else {
       const rankColors: Record<string, string> = {
         "TEMPORAL MASTER": "#ffd700",
-        "TIME SHIFTER": "#00ffff",
-        "CHRONO ADEPT": "#88ff88",
-        "CHRONO NOVICE": "#778899",
+        "TIME SHIFTER":    "#00ffff",
+        "CHRONO ADEPT":    "#88ff88",
+        "CHRONO NOVICE":   "#778899",
       };
       const rowColors = ["#ffd700", "#aaaacc", "#cc8844"];
 
       scores.forEach((entry: LeaderboardEntry, i: number) => {
         const rowY = headerY + 32 + i * 42;
-        const numColor = i < 3 ? rowColors[i] : "#445566";
+        const numColor   = i < 3 ? rowColors[i] : "#445566";
         const scoreColor = i === 0 ? "#ffee44" : "#aaccee";
 
-        // Row highlight for top 3
         if (i < 3) {
           const rowBg = this.add.graphics().setDepth(51);
           rowBg.fillStyle(i === 0 ? 0x221a00 : 0x0d0d22, 0.5);
@@ -282,40 +305,52 @@ export class MenuScene extends Phaser.Scene {
           allObjs.push(rowBg);
         }
 
-        addText(px + 56, rowY, `${i + 1}`, { fontSize: "18px", fontFamily: "monospace", color: numColor }).setOrigin(0.5);
-        addText(px + 180, rowY, `${entry.score}`, { fontSize: "18px", fontFamily: "monospace", color: scoreColor }).setOrigin(0.5);
-        addText(px + 320, rowY, formatTime(entry.timeMs), { fontSize: "18px", fontFamily: "monospace", color: "#aaccff" }).setOrigin(0.5);
-        addText(px + 480, rowY, entry.rank, { fontSize: "13px", fontFamily: "monospace", color: rankColors[entry.rank] ?? "#aaaaaa" }).setOrigin(0.5);
-        addText(px + 630, rowY, entry.date, { fontSize: "13px", fontFamily: "monospace", color: "#445566" }).setOrigin(0.5);
+        addText(px + 56,  rowY, `${i + 1}`,             { fontSize: "18px", fontFamily: "monospace", color: numColor }).setOrigin(0.5);
+        addText(px + 180, rowY, `${entry.score}`,        { fontSize: "18px", fontFamily: "monospace", color: scoreColor }).setOrigin(0.5);
+        addText(px + 320, rowY, formatTime(entry.timeMs),{ fontSize: "18px", fontFamily: "monospace", color: "#aaccff" }).setOrigin(0.5);
+        addText(px + 480, rowY, entry.rank,              { fontSize: "13px", fontFamily: "monospace", color: rankColors[entry.rank] ?? "#aaaaaa" }).setOrigin(0.5);
+        addText(px + 630, rowY, entry.date,              { fontSize: "13px", fontFamily: "monospace", color: "#445566" }).setOrigin(0.5);
       });
     }
 
-    // Clear button
+    // Bottom row: CLEAR on left, CLOSE on right
+    const bottomY = py + panelH - 34;
+
     const clearBg = this.add.graphics().setDepth(52);
-    const clearY = py + panelH - 50;
     clearBg.fillStyle(0x110000, 0.8);
-    clearBg.fillRoundedRect(W / 2 - 80, clearY - 16, 160, 32, 6);
+    clearBg.fillRoundedRect(px + 20, bottomY - 14, 140, 28, 6);
     clearBg.lineStyle(1, 0x882222, 0.6);
-    clearBg.strokeRoundedRect(W / 2 - 80, clearY - 16, 160, 32, 6);
+    clearBg.strokeRoundedRect(px + 20, bottomY - 14, 140, 28, 6);
     allObjs.push(clearBg);
 
-    const clearBtn = addText(W / 2, clearY, "CLEAR SCORES", {
-      fontSize: "14px", fontFamily: "monospace", color: "#883333",
+    const clearBtn = addText(px + 90, bottomY, "CLEAR SCORES", {
+      fontSize: "13px", fontFamily: "monospace", color: "#883333",
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
     clearBtn.on("pointerover", () => clearBtn.setColor("#ff4444"));
-    clearBtn.on("pointerout", () => clearBtn.setColor("#883333"));
-    clearBtn.on("pointerdown", () => {
+    clearBtn.on("pointerout",  () => clearBtn.setColor("#883333"));
+    clearBtn.on("pointerdown", (p: Phaser.Input.Pointer, lx: number, ly: number, e: Event) => {
+      e.stopPropagation();
+      closeAll();
       clearScores();
-      allObjs.forEach((o) => o.destroy());
       this.showLeaderboard();
     });
 
-    addText(W / 2, py + panelH - 16, "Click anywhere outside to close", {
-      fontSize: "12px", fontFamily: "monospace", color: "#334455",
-    }).setOrigin(0.5);
+    const closeBtnBottom = addText(px + panelW - 90, bottomY, "[ CLOSE ]", {
+      fontSize: "14px", fontFamily: "monospace", color: "#aaaaff",
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    closeBtnBottom.on("pointerover", () => closeBtnBottom.setColor("#ffffff"));
+    closeBtnBottom.on("pointerout",  () => closeBtnBottom.setColor("#aaaaff"));
+    closeBtnBottom.on("pointerdown", (p: Phaser.Input.Pointer, lx: number, ly: number, e: Event) => {
+      e.stopPropagation();
+      closeAll();
+    });
 
-    overlay.on("pointerdown", () => allObjs.forEach((o) => o.destroy()));
+    // Overlay only closes when clicking OUTSIDE the panel bounds
+    overlay.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      const inside = pointer.x >= px && pointer.x <= px + panelW &&
+                     pointer.y >= py && pointer.y <= py + panelH;
+      if (!inside) closeAll();
+    });
   }
 
   private showInstructions() {
