@@ -9,6 +9,7 @@ import { Projectile } from "../objects/Projectile";
 import { Collectible } from "../objects/Collectible";
 import { EnemyBase } from "../objects/enemies/EnemyBase";
 import { CRYSTALS_PER_LEVEL, COLORS, COLLAPSE_DELAY, COLLAPSE_RESPAWN } from "../constants";
+import { soundManager } from "../managers/SoundManager";
 
 export interface PlatformDef {
   x: number;
@@ -507,6 +508,7 @@ export abstract class GameScene extends Phaser.Scene {
     this.paused = !this.paused;
 
     if (this.paused) {
+      soundManager.pauseOpen();
       this.physics.pause();
       this.tweens.pauseAll();
       this.pauseContainer.setVisible(true);
@@ -524,6 +526,7 @@ export abstract class GameScene extends Phaser.Scene {
           this.pauseContainer.setVisible(false);
           this.physics.resume();
           this.tweens.resumeAll();
+          soundManager.pauseClose();
         },
       });
     }
@@ -552,6 +555,7 @@ export abstract class GameScene extends Phaser.Scene {
   private handleLevelComplete() {
     if (this.levelComplete) return;
     this.levelComplete = true;
+    soundManager.levelComplete();
 
     this.cameras.main.flash(400, 255, 255, 100);
 
@@ -570,6 +574,7 @@ export abstract class GameScene extends Phaser.Scene {
   private handleGameOver() {
     if (this.gameOver) return;
     this.gameOver = true;
+    soundManager.gameOver();
 
     this.cameras.main.shake(300, 0.015);
     this.cameras.main.fade(800, 0, 0, 0);
@@ -605,6 +610,7 @@ export abstract class GameScene extends Phaser.Scene {
           this.player.addScore(100);
           if (this.crystalsCollected >= this.totalCrystals) {
             this.uiManager?.showCrystalsComplete();
+            soundManager.allCrystals();
           }
         } else if (c.collectibleType === "shard") {
           this.player.addScore(50);

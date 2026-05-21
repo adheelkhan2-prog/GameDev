@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { TimeManager } from "../managers/TimeManager";
+import { soundManager } from "../managers/SoundManager";
 import {
   PLAYER_SPEED,
   PLAYER_JUMP_VELOCITY,
@@ -111,6 +112,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (jumpPressed && onGround) {
       this.setVelocityY(PLAYER_JUMP_VELOCITY);
       this.spawnJumpDust();
+      soundManager.jump();
     }
 
     // Update glow position
@@ -139,6 +141,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.health--;
     this.invincible = true;
+    soundManager.damage();
 
     this.onDamage?.();
 
@@ -177,6 +180,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.invincibleTimer?.destroy();
     this.glowTween?.stop();
     this.glowGraphic.destroy();
+    soundManager.death();
 
     // Death burst
     try {

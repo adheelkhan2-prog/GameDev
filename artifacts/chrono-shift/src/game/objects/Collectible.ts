@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { COLORS } from "../constants";
+import { soundManager } from "../managers/SoundManager";
 
 export type CollectibleType = "crystal" | "shard" | "health";
 
@@ -81,6 +82,10 @@ export class Collectible extends Phaser.Physics.Arcade.Sprite {
   collect() {
     this.bobTween?.stop();
     this.glowGraphic?.destroy();
+
+    if (this.collectibleType === "crystal") soundManager.crystalCollect();
+    else if (this.collectibleType === "shard") soundManager.shardCollect();
+    else soundManager.healthCollect();
 
     // Sparkle burst
     try {

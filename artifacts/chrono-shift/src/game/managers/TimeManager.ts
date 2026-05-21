@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { soundManager } from "./SoundManager";
 import {
   TIME_SLOW_DURATION,
   TIME_SLOW_COOLDOWN,
@@ -119,6 +120,7 @@ export class TimeManager {
 
   activateTimeSlow() {
     if (!this.slowReady || this.rewindActive) return;
+    soundManager.timeSlow();
 
     this.slowActive = true;
     this.slowReady = false;
@@ -136,6 +138,7 @@ export class TimeManager {
 
   deactivateTimeSlow() {
     if (!this.slowActive) return;
+    soundManager.timeSlowEnd();
     this.slowActive = false;
     this.slowOverlay?.setVisible(false);
     this.slowParticles?.stop();
@@ -153,6 +156,7 @@ export class TimeManager {
   activateTimeRewind() {
     if (!this.rewindReady || this.rewindActive) return;
     if (this.slowActive) this.deactivateTimeSlow();
+    soundManager.timeRewind();
 
     if (this.trackedObjects.every((t) => t.history.length === 0)) return;
 
