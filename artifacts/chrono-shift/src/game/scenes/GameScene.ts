@@ -526,6 +526,9 @@ export abstract class GameScene extends Phaser.Scene {
       soundManager.pauseOpen();
     } else {
       // ── Resuming ──
+      // Must resume tweens first so the fade-out tween can actually run
+      // (tweens.pauseAll() also blocks newly added tweens)
+      this.tweens.resumeAll();
       this.tweens.add({
         targets: this.pauseContainer,
         alpha: { from: 1, to: 0 },
@@ -534,7 +537,6 @@ export abstract class GameScene extends Phaser.Scene {
           this.pauseContainer.setVisible(false);
           this.uiManager?.resumeTimer();
           this.physics.resume();
-          this.tweens.resumeAll();
           this.paused = false;
           soundManager.pauseClose();
         },
