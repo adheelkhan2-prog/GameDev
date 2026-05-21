@@ -1,0 +1,87 @@
+$ PORT=5173 BASE_PATH=/ pnpm --filter @workspace/chrono-shift run dev
+$ vite --config vite.config.ts --host 0.0.0.0
+C:\Users\user\GameDev\node_modules\.pnpm\rollup@4.60.3\node_modules\rollup\dist\native.js:115
+                throw new Error(
+                      ^
+
+Error: Cannot find module @rollup/rollup-win32-x64-msvc. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (C:\Users\user\GameDev\node_modules\.pnpm\rollup@4.60.3\node_modules\rollup\dist\native.js:115:9)
+    at Object.<anonymous> (C:\Users\user\GameDev\node_modules\.pnpm\rollup@4.60.3\node_modules\rollup\dist\native.js:124:76)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+    at Object..js (node:internal/modules/cjs/loader:1961:10)
+    at Module.load (node:internal/modules/cjs/loader:1553:32)
+    at Module._load (node:internal/modules/cjs/loader:1355:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25) {
+  [cause]: Error: Cannot find module '@rollup/rollup-win32-x64-msvc'
+  Require stack:
+  - C:\Users\user\GameDev\node_modules\.pnpm\rollup@4.60.3\node_modules\rollup\dist\native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1049:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1073:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1094:12)
+      at Module._load (node:internal/modules/cjs/loader:1262:25)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+      at Module.require (node:internal/modules/cjs/loader:1576:12)
+      at require (node:internal/modules/helpers:153:16)
+      at requireWithFriendlyError (C:\Users\user\GameDev\node_modules\.pnpm\rollup@4.60.3\node_modules\rollup\dist\native.js:97:10)
+      at Object.<anonymous> (C:\Users\user\GameDev\node_modules\.pnpm\rollup@4.60.3\node_modules\rollup\dist\native.js:124:76) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [
+      'C:\\Users\\user\\GameDev\\node_modules\\.pnpm\\rollup@4.60.3\\node_modules\\rollup\\dist\\native.js'
+    ]
+  }
+}
+
+Node.js v24.15.0
+C:\Users\user\GameDev\artifacts\chrono-shift:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/chrono-shift@0.0.0 dev: `vite --config vite.config.ts --host 0.0.0.0`
+Exit status 1
+
+user@DESKTOP-JAHLA7F MINGW64 ~/GameDev (main)
+$ rm -rf node_modules
+pnpm install --ignore-scripts
+Scope: all 9 workspace projects
+Packages: +485
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 495, reused 483, downloaded 2, added 485, done
+
+devDependencies:
++ prettier 3.8.3
++ typescript 5.9.3 (6.0.3 is available)
+
+Done in 18.9s using pnpm v11.1.3
+
+user@DESKTOP-JAHLA7F MINGW64 ~/GameDev (main)
+$ pnpm --filter @workspace/db run push
+PORT=5173 BASE_PATH=/ pnpm --filter @workspace/chrono-shift run dev
+$ drizzle-kit push --config ./drizzle.config.ts
+Reading config file 'C:\Users\user\GameDev\lib\db\drizzle.config.ts'
+DATABASE_URL, ensure the database is provisioned
+C:\Users\user\GameDev\lib\db:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/db@0.0.0 push: `drizzle-kit push --config ./drizzle.config.ts`
+Exit status 1
+$ vite --config vite.config.ts --host 0.0.0.0
+failed to load config from C:\Users\user\GameDev\artifacts\chrono-shift\vite.config.ts
+error when starting dev server:
+Error: Cannot find module '../lightningcss.win32-x64-msvc.node'
+Require stack:
+- C:\Users\user\GameDev\node_modules\.pnpm\lightningcss@1.32.0\node_modules\lightningcss\node\index.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1049:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1073:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1094:12)
+    at Module._load (node:internal/modules/cjs/loader:1262:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1576:12)
+    at require (node:internal/modules/helpers:153:16)
+    at Object.<anonymous> (C:\Users\user\GameDev\node_modules\.pnpm\lightningcss@1.32.0\node_modules\lightningcss\node\index.js:20:12)
+    at Module._compile (node:internal/modules/cjs/loader:1830:14)
+C:\Users\user\GameDev\artifacts\chrono-shift:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/chrono-shift@0.0.0 dev: `vite --config vite.config.ts --host 0.0.0.0`
+Exit status 1
+
+user@DESKTOP-JAHLA7F MINGW64 ~/GameDev (main)
+$ 
