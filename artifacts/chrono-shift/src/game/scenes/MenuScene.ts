@@ -268,11 +268,12 @@ export class MenuScene extends Phaser.Scene {
 
     // Column headers
     const headerY = py + 86;
-    addText(px + 56,  headerY, "#",     { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
-    addText(px + 180, headerY, "SCORE", { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
-    addText(px + 320, headerY, "TIME",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
-    addText(px + 480, headerY, "RANK",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
-    addText(px + 630, headerY, "DATE",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 36,  headerY, "#",     { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 148, headerY, "SCORE", { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 268, headerY, "TIME",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 378, headerY, "LVL",   { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 498, headerY, "RANK",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
+    addText(px + 635, headerY, "DATE",  { fontSize: "14px", fontFamily: "monospace", color: "#556677" }).setOrigin(0.5);
 
     // Divider
     const div = this.add.graphics().setDepth(52);
@@ -281,7 +282,7 @@ export class MenuScene extends Phaser.Scene {
     allObjs.push(div);
 
     if (scores.length === 0) {
-      addText(W / 2, H / 2 + 20, "No scores yet — complete all 3 levels to appear here!", {
+      addText(W / 2, H / 2 + 20, "No scores yet — complete a level to appear here!", {
         fontSize: "16px", fontFamily: "monospace", color: "#445566",
       }).setOrigin(0.5);
     } else {
@@ -305,11 +306,14 @@ export class MenuScene extends Phaser.Scene {
           allObjs.push(rowBg);
         }
 
-        addText(px + 56,  rowY, `${i + 1}`,             { fontSize: "18px", fontFamily: "monospace", color: numColor }).setOrigin(0.5);
-        addText(px + 180, rowY, `${entry.score}`,        { fontSize: "18px", fontFamily: "monospace", color: scoreColor }).setOrigin(0.5);
-        addText(px + 320, rowY, formatTime(entry.timeMs),{ fontSize: "18px", fontFamily: "monospace", color: "#aaccff" }).setOrigin(0.5);
-        addText(px + 480, rowY, entry.rank,              { fontSize: "13px", fontFamily: "monospace", color: rankColors[entry.rank] ?? "#aaaaaa" }).setOrigin(0.5);
-        addText(px + 630, rowY, entry.date,              { fontSize: "13px", fontFamily: "monospace", color: "#445566" }).setOrigin(0.5);
+        const lvl = entry.levelsCompleted ?? 3;
+        const lvlColor = lvl === 3 ? "#ffd700" : lvl === 2 ? "#aaccff" : "#778899";
+        addText(px + 36,  rowY, `${i + 1}`,              { fontSize: "18px", fontFamily: "monospace", color: numColor }).setOrigin(0.5);
+        addText(px + 148, rowY, `${entry.score}`,         { fontSize: "18px", fontFamily: "monospace", color: scoreColor }).setOrigin(0.5);
+        addText(px + 268, rowY, formatTime(entry.timeMs), { fontSize: "18px", fontFamily: "monospace", color: "#aaccff" }).setOrigin(0.5);
+        addText(px + 378, rowY, `${lvl}/3`,               { fontSize: "16px", fontFamily: "monospace", color: lvlColor }).setOrigin(0.5);
+        addText(px + 498, rowY, entry.rank,               { fontSize: "12px", fontFamily: "monospace", color: rankColors[entry.rank] ?? "#aaaaaa" }).setOrigin(0.5);
+        addText(px + 635, rowY, entry.date,               { fontSize: "12px", fontFamily: "monospace", color: "#445566" }).setOrigin(0.5);
       });
     }
 

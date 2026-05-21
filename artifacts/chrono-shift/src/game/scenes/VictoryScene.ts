@@ -95,8 +95,9 @@ export class VictoryScene extends Phaser.Scene {
     const score = data?.score ?? 0;
     const timeMs = data?.timeMs ?? 0;
 
-    // Save to leaderboard
-    const { isNewBest, position } = saveScore(score, timeMs);
+    // Score was already saved in LevelCompleteScene after completing level 3
+    const isNewBest = false;
+    const position = 1;
 
     this.add
       .text(W / 2, H / 2 - 55, "ALL LEVELS COMPLETE!", {

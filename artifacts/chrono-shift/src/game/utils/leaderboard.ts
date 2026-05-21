@@ -3,6 +3,7 @@ export interface LeaderboardEntry {
   timeMs: number;
   rank: string;
   date: string;
+  levelsCompleted: number;
 }
 
 const STORAGE_KEY = "chrono_shift_leaderboard";
@@ -15,13 +16,14 @@ function getRank(score: number): string {
   return "CHRONO NOVICE";
 }
 
-export function saveScore(score: number, timeMs: number): { isNewBest: boolean; position: number } {
+export function saveScore(score: number, timeMs: number, levelsCompleted: number): { isNewBest: boolean; position: number } {
   const entries = getScores();
   const newEntry: LeaderboardEntry = {
     score,
     timeMs,
     rank: getRank(score),
     date: new Date().toLocaleDateString(),
+    levelsCompleted,
   };
 
   entries.push(newEntry);

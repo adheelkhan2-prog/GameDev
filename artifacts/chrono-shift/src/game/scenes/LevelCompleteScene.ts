@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { saveScore } from "../utils/leaderboard";
 
 interface LevelCompleteData {
   level: number;
@@ -106,6 +107,9 @@ export class LevelCompleteScene extends Phaser.Scene {
     });
 
     const isLastLevel = data?.level === 3;
+
+    // Save score after every level so partial runs appear on the leaderboard
+    saveScore(data?.score ?? 0, cumMs, data?.level ?? 1);
 
     this.createButton(
       W / 2,
