@@ -18,9 +18,11 @@ import {
   COLLAPSE_RESPAWN,
   DIFFICULTY,
   type DifficultyKey,
+  PLAYER_PROJECTILE_SPEED,
+  PLAYER_PROJECTILE_COLOR,
 } from "../constants";
 import { soundManager } from "../managers/SoundManager";
-import { getSettings } from "../utils/settings";
+import { getSettings, type UnlockedAbilities } from "../utils/settings";
 
 export interface PlatformDef {
   x: number;
@@ -73,6 +75,7 @@ export abstract class GameScene extends Phaser.Scene {
   protected enemies!: Phaser.Physics.Arcade.Group;
   protected enemyList: EnemyBase[] = [];
   protected projectiles!: Phaser.Physics.Arcade.Group;
+  protected playerProjectiles!: Phaser.Physics.Arcade.Group;
   protected crystals!: Phaser.Physics.Arcade.StaticGroup;
   protected collectibles: Collectible[] = [];
   protected spikes!: Phaser.Physics.Arcade.StaticGroup;
@@ -138,18 +141,28 @@ export abstract class GameScene extends Phaser.Scene {
     const settings = getSettings();
     const diff = DIFFICULTY[this.difficultyKey];
 
+    const levelAbilities = this.getPlayerAbilities(settings.unlockedAbilities);
     this.player = new Player(
       this,
       this.spawnX,
       this.spawnY,
       this.timeManager,
       diff.playerHealth,
-      settings.unlockedAbilities
+      levelAbilities
     );
     this.player.onDamage = () => this.uiManager?.flashDamage();
     this.player.onDeath = () => this.handleGameOver();
 
     this.createEnemies();
+
+    this.player.onShoot = (x, y, dir) => {
+      const proj = new Projectile(this, x, y, this.timeManager);
+      proj.setTint(PLAYER_PROJECTILE_COLOR);
+      proj.fire(dir * PLAYER_PROJECTILE_SPEED, 0);
+      this.playerProjectiles.add(proj, true);
+      soundManager.playerShoot();
+    };
+
     this.setupCollisions();
     this.setupCamera();
 
@@ -157,7 +170,7 @@ export abstract class GameScene extends Phaser.Scene {
       this,
       this.timeManager,
       this.levelNumber,
-      settings.unlockedAbilities,
+      levelAbilities,
       diff.playerHealth
     );
 
@@ -346,6 +359,7 @@ export abstract class GameScene extends Phaser.Scene {
       classType: Phaser.Physics.Arcade.Sprite,
     });
     this.projectiles = this.physics.add.group({ classType: Projectile });
+    this.playerProjectiles = this.physics.add.group();
 
     const platformBounds = this.buildPlatforms().map((p) => ({
       x: p.x,
@@ -531,6 +545,34 @@ export abstract class GameScene extends Phaser.Scene {
         if (!this.player.invincible && this.player.active) {
           this.player.takeDamage();
         }
+      }
+    );
+
+    // Player projectiles ↔ enemies
+    this.physics.add.overlap(
+      this.playerProjectiles,
+      this.enemies,
+      (_projSprite, _enemyObj) => {
+        const proj = _projSprite as Projectile;
+        const enemy = _enemyObj as EnemyBase;
+        if (!proj.active || !enemy.active) return;
+        proj.setActive(false).setVisible(false);
+        const died = enemy.takeDamage(1);
+        if (died) {
+          this.player.addScore(Math.round(100 * DIFFICULTY[this.difficultyKey].scoreBonus));
+        }
+        try {
+          const em = this.add.particles(enemy.x, enemy.y, "particle", {
+            speed: { min: 40, max: 130 },
+            angle: { min: 0, max: 360 },
+            scale: { start: 0.8, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 200,
+            quantity: 8,
+            tint: [0x00ffcc, 0x00ff88, 0xffffff],
+          });
+          this.time.delayedCall(260, () => em.destroy());
+        } catch {}
       }
     );
 
@@ -756,6 +798,53 @@ export abstract class GameScene extends Phaser.Scene {
     this.time.delayedCall(260, () => this.scene.start("MenuScene"));
   }
 
+  protected getPlayerAbilities(abilities: UnlockedAbilities): UnlockedAbilities {
+    if (this.levelNumber >= 4) {
+      return { ...abilities, wallClimb: false, shoot: true };
+    }
+    return abilities;
+  }
+
+  protected spawnSingleEnemy(def: EnemyDef): void {
+    const platformBounds = this.buildPlatforms().map((p) => ({
+      x: p.x, y: p.y, w: p.w, h: p.h ?? 24,
+    }));
+    const diff = DIFFICULTY[this.difficultyKey];
+    let enemy: EnemyBase;
+
+    if (def.type === "drone") {
+      const drone = new TemporalDrone(
+        this, def.x, def.y, this.timeManager,
+        def.patrolMin ?? def.x - 150, def.patrolMax ?? def.x + 150
+      );
+      drone.baseSpeedMultiplier = diff.enemySpeed;
+      this.timeManager.register(drone);
+      enemy = drone;
+    } else if (def.type === "phase_shifter") {
+      const ps = new PhaseShifter(
+        this, def.x, def.y, this.timeManager, platformBounds
+      );
+      (ps as EnemyBase & { baseSpeedMultiplier?: number }).baseSpeedMultiplier = diff.enemySpeed;
+      this.timeManager.register(ps);
+      enemy = ps;
+    } else if (def.type === "chaser") {
+      const chaser = new ChaserEnemy(
+        this, def.x, def.y, this.timeManager, this.player,
+        def.patrolMin ?? def.x - 200, def.patrolMax ?? def.x + 200
+      );
+      chaser.baseSpeedMultiplier = diff.enemySpeed;
+      enemy = chaser;
+    } else {
+      enemy = new Pulsar(
+        this, def.x, def.y, this.timeManager, this.projectiles,
+        def.fireAngle ?? 180
+      );
+    }
+
+    this.enemies.add(enemy, true);
+    this.enemyList.push(enemy);
+  }
+
   protected handleLevelComplete() {
     if (this.levelComplete) return;
     this.levelComplete = true;
@@ -861,8 +950,14 @@ export abstract class GameScene extends Phaser.Scene {
       if (e.active) e.update(delta);
     }
 
-    // Projectiles
+    // Enemy projectiles
     this.projectiles.getChildren().forEach((p) => {
+      const proj = p as Projectile;
+      if (proj.active) proj.update(delta);
+    });
+
+    // Player projectiles
+    this.playerProjectiles.getChildren().forEach((p) => {
       const proj = p as Projectile;
       if (proj.active) proj.update(delta);
     });
@@ -875,7 +970,8 @@ export abstract class GameScene extends Phaser.Scene {
       this.player.x,
       this.player.y,
       this.player.dashCooldownRemaining,
-      this.player.dashActive
+      this.player.dashActive,
+      this.player.shootCooldownRemaining
     );
   }
 

@@ -2,6 +2,7 @@ export interface UnlockedAbilities {
   doubleJump: boolean;
   dash: boolean;
   wallClimb: boolean;
+  shoot: boolean;
 }
 
 export interface GameSettings {
@@ -17,6 +18,7 @@ const DEFAULT_ABILITIES: UnlockedAbilities = {
   doubleJump: false,
   dash: false,
   wallClimb: false,
+  shoot: false,
 };
 
 const DEFAULTS: GameSettings = {

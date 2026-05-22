@@ -30,6 +30,10 @@ export const DOUBLE_JUMP_VELOCITY = -460;
 export const WALL_JUMP_VX = 270;
 export const WALL_JUMP_VY = -490;
 
+export const PLAYER_SHOOT_COOLDOWN = 1500;
+export const PLAYER_PROJECTILE_SPEED = 520;
+export const PLAYER_PROJECTILE_COLOR = 0x00ffcc;
+
 export const BOSS_MAX_HP = 15;
 export const BOSS_SPEED = 95;
 export const BOSS_CHARGE_SPEED = 330;

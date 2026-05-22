@@ -319,6 +319,15 @@ class SoundManager {
     this.osc("sine", 440, t + 0.3, 0.3, 0.2, 0.01, 0.18, 880);
   }
 
+  playerShoot() {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    this.osc("square", 1100, t, 0.05, 0.12, 0.001, 0.06, 550);
+    this.osc("sine",   700,  t, 0.06, 0.10, 0.002, 0.07, 350);
+    this.noise(t, 0.07, 0.10, 2200, 6);
+  }
+
   bossDefeat() {
     const ctx = this.getCtx();
     if (!ctx) return;

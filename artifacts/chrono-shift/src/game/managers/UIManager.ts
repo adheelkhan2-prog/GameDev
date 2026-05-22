@@ -5,6 +5,7 @@ import {
   TIME_SLOW_COOLDOWN,
   TIME_REWIND_COOLDOWN,
   DASH_COOLDOWN,
+  PLAYER_SHOOT_COOLDOWN,
   COLORS,
 } from "../constants";
 import type { UnlockedAbilities } from "../utils/settings";
@@ -46,6 +47,10 @@ export class UIManager {
   private dashBar: Phaser.GameObjects.Graphics | null = null;
   private dashStatus: Phaser.GameObjects.Text | null = null;
 
+  private shootLabel: Phaser.GameObjects.Text | null = null;
+  private shootBar: Phaser.GameObjects.Graphics | null = null;
+  private shootStatus: Phaser.GameObjects.Text | null = null;
+
   private abilityIcons: Phaser.GameObjects.Text | null = null;
 
   private damageFlash!: Phaser.GameObjects.Rectangle;
@@ -71,7 +76,7 @@ export class UIManager {
     scene: Phaser.Scene,
     timeManager: TimeManager,
     levelNumber = 1,
-    abilities: UnlockedAbilities = { doubleJump: false, dash: false, wallClimb: false },
+    abilities: UnlockedAbilities = { doubleJump: false, dash: false, wallClimb: false, shoot: false },
     maxHealth = 3
   ) {
     this.scene = scene;
@@ -99,8 +104,7 @@ export class UIManager {
     const H = this.scene.scale.height;
 
     const anyAbility = this.abilities.doubleJump || this.abilities.dash || this.abilities.wallClimb;
-    const extraRows = (this.abilities.dash ? 1 : 0) + (anyAbility && !this.abilities.dash ? 0 : 0);
-    const panelH = 90 + (this.abilities.dash ? 30 : 0) + (anyAbility ? 24 : 0);
+    const panelH = 90 + (this.abilities.dash ? 30 : 0) + (this.abilities.shoot ? 30 : 0) + (anyAbility ? 24 : 0);
 
     // ── Top-left panel ──
     const panelBg = this.scene.add.graphics();
@@ -208,6 +212,26 @@ export class UIManager {
       this.dashBar.setDepth(91).setScrollFactor(0);
 
       this.dashStatus = this.scene.add
+        .text(14, rowY + 16, "READY", {
+          fontSize: "11px", fontFamily: "monospace", color: "#44ff88",
+        })
+        .setDepth(91).setScrollFactor(0);
+
+      rowY += 34;
+    }
+
+    // Shoot row (if unlocked)
+    if (this.abilities.shoot) {
+      this.shootLabel = this.scene.add
+        .text(14, rowY, "[F] SHOOT", {
+          fontSize: "13px", fontFamily: "monospace", color: "#00ffcc",
+        })
+        .setDepth(91).setScrollFactor(0);
+
+      this.shootBar = this.scene.add.graphics();
+      this.shootBar.setDepth(91).setScrollFactor(0);
+
+      this.shootStatus = this.scene.add
         .text(14, rowY + 16, "READY", {
           fontSize: "11px", fontFamily: "monospace", color: "#44ff88",
         })
@@ -352,7 +376,8 @@ export class UIManager {
     playerX = 0,
     playerY = 0,
     dashCooldownRemaining = 0,
-    dashActive = false
+    dashActive = false,
+    shootCooldownRemaining = 0
   ) {
     const elapsed = this.scene.time.now - this.startTime - this.totalPausedMs;
     const secs = Math.floor(elapsed / 1000);
@@ -364,14 +389,14 @@ export class UIManager {
     this.crystalText.setText(`CRYSTALS: ${crystals}/${totalCrystals}`);
     this.timerText.setText(`TIME: ${timeStr}`);
     this.updateHearts(health);
-    this.updateAbilityBars(dashCooldownRemaining, dashActive);
+    this.updateAbilityBars(dashCooldownRemaining, dashActive, shootCooldownRemaining);
     this.drawMiniMap(playerX, playerY);
   }
 
-  private updateAbilityBars(dashCooldownRemaining = 0, dashActive = false) {
+  private updateAbilityBars(dashCooldownRemaining = 0, dashActive = false, shootCooldownRemaining = 0) {
     const H = this.scene.scale.height;
     const anyAbility = this.abilities.doubleJump || this.abilities.dash || this.abilities.wallClimb;
-    const panelH = 90 + (this.abilities.dash ? 30 : 0) + (anyAbility ? 24 : 0);
+    const panelH = 90 + (this.abilities.dash ? 30 : 0) + (this.abilities.shoot ? 30 : 0) + (anyAbility ? 24 : 0);
     const rowY0 = H - panelH + 4;
     const barW = 155;
     const barH = 5;
@@ -447,6 +472,28 @@ export class UIManager {
       this.dashStatus.setPosition(14, rowY2 + 16);
       this.dashStatus.setText(dashStatusText);
       this.dashStatus.setColor(dashFill >= 1 && !dashActive ? "#44ff88" : dashActive ? "#ffcc44" : "#ff8844");
+    }
+
+    // Shoot bar (if unlocked)
+    const shootRowY = rowY1 + 34 + (this.abilities.dash ? 34 : 0);
+    if (this.abilities.shoot && this.shootBar && this.shootStatus && this.shootLabel) {
+      this.shootLabel.setPosition(14, shootRowY);
+      this.shootBar.clear();
+      this.shootBar.fillStyle(0x223355, 1);
+      this.shootBar.fillRect(52, shootRowY + 16, barW, barH);
+      let shootFill = 0, shootColor = 0x44ff88, shootStatusText = "READY";
+      if (shootCooldownRemaining > 0) {
+        shootFill = 1 - shootCooldownRemaining / PLAYER_SHOOT_COOLDOWN;
+        shootColor = 0xff6600;
+        shootStatusText = `CD ${Math.ceil(shootCooldownRemaining / 1000)}s`;
+      } else {
+        shootFill = 1;
+      }
+      this.shootBar.fillStyle(shootColor, 1);
+      this.shootBar.fillRect(52, shootRowY + 16, barW * shootFill, barH);
+      this.shootStatus.setPosition(14, shootRowY + 16);
+      this.shootStatus.setText(shootStatusText);
+      this.shootStatus.setColor(shootCooldownRemaining <= 0 ? "#44ff88" : "#ff8844");
     }
   }
 

@@ -1,6 +1,29 @@
 import { GameScene, PlatformDef, EnemyDef, CollectibleDef, SpikeDef, VortexDef } from "./GameScene";
 import { COLORS } from "../constants";
 
+const WAVE_CHECKPOINTS = [1200, 2000, 2800, 3400];
+const WAVE_DEFS: EnemyDef[][] = [
+  [
+    { type: "chaser", x: 1350, y: 610, patrolMin: 1200, patrolMax: 1700 },
+    { type: "chaser", x: 1650, y: 610, patrolMin: 1500, patrolMax: 1900 },
+  ],
+  [
+    { type: "drone",  x: 2050, y: 380, patrolMin: 2000, patrolMax: 2300 },
+    { type: "chaser", x: 2150, y: 610, patrolMin: 2000, patrolMax: 2450 },
+    { type: "chaser", x: 2450, y: 610, patrolMin: 2300, patrolMax: 2700 },
+  ],
+  [
+    { type: "chaser",        x: 2900, y: 610, patrolMin: 2800, patrolMax: 3200 },
+    { type: "phase_shifter", x: 2960, y: 600 },
+    { type: "chaser",        x: 3150, y: 610, patrolMin: 3000, patrolMax: 3450 },
+  ],
+  [
+    { type: "chaser", x: 3450, y: 610, patrolMin: 3400, patrolMax: 3700 },
+    { type: "drone",  x: 3550, y: 350, patrolMin: 3400, patrolMax: 3750 },
+    { type: "chaser", x: 3650, y: 610, patrolMin: 3550, patrolMax: 3800 },
+  ],
+];
+
 export class Level4Scene extends GameScene {
   protected levelNumber = 4;
   protected worldWidth = 3800;
@@ -100,5 +123,61 @@ export class Level4Scene extends GameScene {
       { x: 1950, y: 580 },
       { x: 3300, y: 580 },
     ];
+  }
+
+  private wavesSpawned = 0;
+
+  update(time: number, delta: number): void {
+    super.update(time, delta);
+    this.checkEnemyWaves();
+  }
+
+  private checkEnemyWaves(): void {
+    if (!this.player || this.levelComplete || this.gameOver) return;
+    while (
+      this.wavesSpawned < WAVE_CHECKPOINTS.length &&
+      this.player.x >= WAVE_CHECKPOINTS[this.wavesSpawned]
+    ) {
+      for (const def of WAVE_DEFS[this.wavesSpawned]) {
+        this.spawnSingleEnemy(def);
+      }
+      this.showWaveAlert();
+      this.wavesSpawned++;
+    }
+  }
+
+  private showWaveAlert(): void {
+    const W = this.scale.width;
+    const banner = this.add
+      .text(W / 2, 120, "⚠  REINFORCEMENTS INCOMING  ⚠", {
+        fontSize: "18px",
+        fontFamily: "monospace",
+        color: "#ff4400",
+        stroke: "#220000",
+        strokeThickness: 3,
+        backgroundColor: "#000000cc",
+        padding: { x: 12, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setDepth(92)
+      .setScrollFactor(0)
+      .setAlpha(0);
+
+    this.tweens.add({
+      targets: banner,
+      alpha: 1,
+      duration: 300,
+      ease: "Power2",
+      onComplete: () => {
+        this.time.delayedCall(2000, () => {
+          this.tweens.add({
+            targets: banner,
+            alpha: 0,
+            duration: 500,
+            onComplete: () => banner.destroy(),
+          });
+        });
+      },
+    });
   }
 }

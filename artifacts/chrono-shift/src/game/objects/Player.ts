@@ -12,6 +12,7 @@ import {
   DOUBLE_JUMP_VELOCITY,
   WALL_JUMP_VX,
   WALL_JUMP_VY,
+  PLAYER_SHOOT_COOLDOWN,
   COLORS,
 } from "../constants";
 import type { UnlockedAbilities } from "../utils/settings";
@@ -25,6 +26,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private keyR!: Phaser.Input.Keyboard.Key;
   private keyW!: Phaser.Input.Keyboard.Key;
   private keyQ!: Phaser.Input.Keyboard.Key;
+  private keyF!: Phaser.Input.Keyboard.Key;
 
   private timeManager: TimeManager;
 
@@ -50,10 +52,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly hasDoubleJump: boolean;
   readonly hasDash: boolean;
   readonly hasWallClimb: boolean;
+  readonly hasShoot: boolean;
+
+  // Shoot callback
+  onShoot?: (x: number, y: number, dir: number) => void;
 
   // Dash state
   dashCooldownRemaining = 0;
   dashActive = false;
+
+  // Shoot state
+  shootCooldownRemaining = 0;
   private dashTimer: Phaser.Time.TimerEvent | null = null;
 
   // Wall contact
@@ -66,7 +75,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     y: number,
     timeManager: TimeManager,
     maxHealth = PLAYER_MAX_HEALTH,
-    abilities: UnlockedAbilities = { doubleJump: false, dash: false, wallClimb: false }
+    abilities: UnlockedAbilities = { doubleJump: false, dash: false, wallClimb: false, shoot: false }
   ) {
     super(scene, x, y, "player");
     scene.add.existing(this);
@@ -77,6 +86,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.hasDoubleJump = abilities.doubleJump;
     this.hasDash = abilities.dash;
     this.hasWallClimb = abilities.wallClimb;
+    this.hasShoot = abilities.shoot ?? false;
 
     this.setCollideWorldBounds(true);
     this.setBounce(0.05);
@@ -102,6 +112,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.keyE = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     this.keyR = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.keyQ = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
+    this.keyF = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     scene.input.keyboard!.on("keydown-E", () => {
       this.timeManager.activateTimeSlow();
@@ -217,6 +228,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       );
     }
 
+    // Shoot (F key)
+    if (
+      this.hasShoot &&
+      this.shootCooldownRemaining <= 0 &&
+      Phaser.Input.Keyboard.JustDown(this.keyF)
+    ) {
+      const dir = this.flipX ? -1 : 1;
+      this.onShoot?.(this.x, this.y, dir);
+      this.shootCooldownRemaining = PLAYER_SHOOT_COOLDOWN;
+      this.spawnShootEffect(dir);
+    }
+
+    // Shoot cooldown tick
+    if (this.shootCooldownRemaining > 0) {
+      this.shootCooldownRemaining = Math.max(
+        0,
+        this.shootCooldownRemaining - 16 * this.timeManager.getSlowMultiplier()
+      );
+    }
+
     this.prevOnGround = onGround;
     this.prevVelocityY = body.velocity.y;
     this.renderGlow();
@@ -249,6 +280,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.dashActive = false;
       this.invincible = false;
     });
+  }
+
+  private spawnShootEffect(dir: number) {
+    try {
+      const em = this.scene.add.particles(this.x + dir * 18, this.y, "particle", {
+        speed: { min: 60, max: 200 },
+        angle: dir > 0 ? { min: -20, max: 20 } : { min: 160, max: 200 },
+        scale: { start: 0.8, end: 0 },
+        alpha: { start: 1, end: 0 },
+        lifespan: 200,
+        quantity: 8,
+        tint: [0x00ffcc, 0x00ff88, 0xffffff],
+      });
+      this.scene.time.delayedCall(260, () => em.destroy());
+    } catch {}
   }
 
   private spawnJumpDust() {
