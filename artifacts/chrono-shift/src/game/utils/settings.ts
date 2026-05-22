@@ -14,9 +14,9 @@ export interface GameSettings {
 const KEY = "chrono_shift_settings";
 
 const DEFAULT_ABILITIES: UnlockedAbilities = {
-  doubleJump: true,
-  dash: true,
-  wallClimb: true,
+  doubleJump: false,
+  dash: false,
+  wallClimb: false,
 };
 
 const DEFAULTS: GameSettings = {
