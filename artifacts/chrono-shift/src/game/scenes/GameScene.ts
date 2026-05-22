@@ -795,6 +795,7 @@ export abstract class GameScene extends Phaser.Scene {
       this.scene.start("GameOverScene", {
         level: this.levelNumber,
         score: this.player.score,
+        retryScene: this.scene.key,
       });
     });
   }

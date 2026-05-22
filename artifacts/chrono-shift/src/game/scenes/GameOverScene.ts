@@ -3,6 +3,7 @@ import Phaser from "phaser";
 interface GameOverData {
   level: number;
   score: number;
+  retryScene?: string;
 }
 
 export class GameOverScene extends Phaser.Scene {
@@ -84,8 +85,8 @@ export class GameOverScene extends Phaser.Scene {
     this.createButton(W / 2, H / 2 + 110, "↺  TRY AGAIN", "#ff6655", () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(300, () => {
-        const levelScene = `Level${data?.level ?? 1}Scene`;
-        this.scene.start(levelScene);
+        const retryScene = data?.retryScene ?? `Level${data?.level ?? 1}Scene`;
+        this.scene.start(retryScene);
       });
     });
 
