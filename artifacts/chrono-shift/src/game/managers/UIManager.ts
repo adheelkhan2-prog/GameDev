@@ -500,11 +500,56 @@ export class UIManager {
   flashDamage() {
     this.scene.tweens.add({
       targets: this.damageFlash,
-      alpha: { from: 0.38, to: 0 },
-      duration: 400,
+      alpha: { from: 0.55, to: 0 },
+      duration: 480,
       ease: "Power2",
     });
-    this.scene.cameras.main.shake(190, 0.009);
+    this.scene.cameras.main.shake(250, 0.018);
+    this.scene.tweens.add({
+      targets: this.scene.cameras.main,
+      zoom: { from: 1.035, to: 1.0 },
+      duration: 270,
+      ease: "Power2",
+    });
+  }
+
+  showCombo(count: number) {
+    const W = this.scene.scale.width;
+    const palette = ["", "", "#ffee44", "#ff9900", "#ff4400", "#ff00cc", "#00ffcc"];
+    const color = palette[Math.min(count, palette.length - 1)] ?? "#00ffcc";
+    const banner = this.scene.add
+      .text(W / 2, 118, `${count}\u00d7 COMBO!`, {
+        fontSize: count >= 4 ? "28px" : "22px",
+        fontFamily: "monospace",
+        color,
+        stroke: "#000000",
+        strokeThickness: 4,
+        shadow: { offsetX: 0, offsetY: 0, color, blur: 14, fill: true },
+      })
+      .setOrigin(0.5)
+      .setDepth(93)
+      .setScrollFactor(0)
+      .setAlpha(0);
+    this.scene.tweens.add({
+      targets: banner,
+      alpha: 1,
+      scaleX: { from: 0.75, to: 1.0 },
+      scaleY: { from: 0.75, to: 1.0 },
+      duration: 210,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.scene.time.delayedCall(900, () => {
+          this.scene.tweens.add({
+            targets: banner,
+            alpha: 0,
+            y: banner.y - 20,
+            duration: 420,
+            ease: "Power2",
+            onComplete: () => banner.destroy(),
+          });
+        });
+      },
+    });
   }
 
   showCrystalsComplete() {

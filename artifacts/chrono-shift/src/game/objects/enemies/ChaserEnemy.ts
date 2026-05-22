@@ -25,7 +25,7 @@ export class ChaserEnemy extends EnemyBase {
     this.player = player;
     this.patrolMinX = patrolMinX;
     this.patrolMaxX = patrolMaxX;
-    this.hp = 1;
+    this.initHealthBar(2);
 
     this.glowGraphic = scene.add.graphics();
     this.glowGraphic.setDepth(14);
@@ -66,6 +66,7 @@ export class ChaserEnemy extends EnemyBase {
     }
 
     this.drawGlow(this.aggroActive);
+    this.drawHpBar();
   }
 
   destroy(fromScene?: boolean) {

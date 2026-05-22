@@ -7,6 +7,8 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
   baseSpeedMultiplier = 1.0;
   active = true;
   hp = 1;
+  maxHp = 1;
+  protected hpBarGfx: Phaser.GameObjects.Graphics | null = null;
   onDefeated?: () => void;
 
   constructor(
@@ -33,6 +35,31 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     return this.baseSpeed * this.baseSpeedMultiplier * this.timeManager.getSlowMultiplier();
   }
 
+  protected initHealthBar(hp: number) {
+    this.hp = hp;
+    this.maxHp = hp;
+    if (hp > 1) {
+      this.hpBarGfx = this.scene.add.graphics().setDepth(31);
+      this.drawHpBar();
+    }
+  }
+
+  protected drawHpBar() {
+    const gfx = this.hpBarGfx;
+    if (!gfx || !this.active) return;
+    const pct = Math.max(0, this.hp / this.maxHp);
+    const bw = 32;
+    const bh = 4;
+    const bx = this.x - bw / 2;
+    const by = this.y - 26;
+    gfx.clear();
+    gfx.fillStyle(0x1a0000, 0.9);
+    gfx.fillRect(bx, by, bw, bh);
+    const col = pct > 0.5 ? 0x44ff44 : pct > 0.25 ? 0xffaa00 : 0xff2222;
+    gfx.fillStyle(col, 1);
+    gfx.fillRect(bx, by, Math.max(1, bw * pct), bh);
+  }
+
   takeDamage(amount = 1): boolean {
     if (!this.active) return false;
     this.hp -= amount;
@@ -41,12 +68,15 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
       if (this.active) this.clearTint();
     });
     if (this.hp <= 0) {
+      this.hpBarGfx?.destroy();
+      this.hpBarGfx = null;
       this.spawnDeathEffect();
       this.setActive(false).setVisible(false);
       if (this.body) (this.body as Phaser.Physics.Arcade.Body).enable = false;
       this.onDefeated?.();
       return true;
     }
+    this.drawHpBar();
     return false;
   }
 
@@ -66,4 +96,9 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
   }
 
   hitByRewind() {}
+
+  destroy(fromScene?: boolean) {
+    this.hpBarGfx?.destroy();
+    super.destroy(fromScene);
+  }
 }

@@ -395,6 +395,32 @@ class SoundManager {
     setTimeout(playAccent, 1500);
   }
 
+  comboKill() {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    this.osc("sine", 660, t, 0.12, 0.15, 0.003, 0.07, 990);
+    this.osc("triangle", 990, t + 0.05, 0.10, 0.10, 0.002, 0.06, 1320);
+  }
+
+  itemPickup() {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    this.osc("sine", 440, t, 0.10, 0.10, 0.004, 0.07);
+    this.osc("sine", 660, t + 0.07, 0.08, 0.10, 0.003, 0.06);
+    this.osc("sine", 880, t + 0.14, 0.06, 0.10, 0.002, 0.06);
+  }
+
+  weakPointHit() {
+    const ctx = this.getCtx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    this.osc("square", 880, t, 0.12, 0.15, 0.001, 0.08, 1320);
+    this.noise(t, 0.14, 0.25, 2000, 5);
+    this.osc("sine", 1760, t + 0.05, 0.09, 0.12, 0.002, 0.07);
+  }
+
   stopAmbientMusic() {
     if (!this.ambientRunning) return;
     this.ambientRunning = false;

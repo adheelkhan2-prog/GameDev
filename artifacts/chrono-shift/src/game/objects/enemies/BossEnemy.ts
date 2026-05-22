@@ -15,10 +15,16 @@ export class BossEnemy extends EnemyBase {
   private player: Phaser.Physics.Arcade.Sprite;
   private projectileGroup: Phaser.Physics.Arcade.Group;
   private glowGfx: Phaser.GameObjects.Graphics;
-  private hpBarGfx: Phaser.GameObjects.Graphics;
+  private bossHpGfx: Phaser.GameObjects.Graphics;
   private phaseLabel: Phaser.GameObjects.Text;
+  private weakPointGfx: Phaser.GameObjects.Graphics;
+  private weakPointLabel: Phaser.GameObjects.Text;
 
   phase: BossPhase = 1;
+  weakPointActive = false;
+  private weakPointTimer = 0;
+  private readonly WEAK_CYCLE = 9;
+  private readonly WEAK_OPEN = 3;
   private charging = false;
   private chargeTarget = 0;
   private chargeTimer = 0;
@@ -49,11 +55,21 @@ export class BossEnemy extends EnemyBase {
     this.setCollideWorldBounds(true);
 
     this.glowGfx = scene.add.graphics().setDepth(19);
-    this.hpBarGfx = scene.add.graphics().setDepth(30);
+    this.bossHpGfx = scene.add.graphics().setDepth(30);
     this.phaseLabel = scene.add.text(x, y - 60, "PHASE I", {
       fontSize: "14px", fontFamily: "monospace", color: "#ff4400",
       stroke: "#000000", strokeThickness: 3,
     }).setOrigin(0.5).setDepth(31);
+
+    this.weakPointGfx = scene.add.graphics().setDepth(28);
+    this.weakPointLabel = scene.add
+      .text(x, y - 44, "WEAK POINT", {
+        fontSize: "10px", fontFamily: "monospace", color: "#00ffcc",
+        stroke: "#002211", strokeThickness: 2,
+      })
+      .setOrigin(0.5)
+      .setDepth(32)
+      .setVisible(false);
 
     this.drawGlow();
   }
@@ -65,7 +81,7 @@ export class BossEnemy extends EnemyBase {
     this.glowGfx.fillCircle(this.x, this.y, 52);
   }
 
-  private drawHpBar() {
+  private drawBossHpBar() {
     const W = this.scene.scale.width;
     const pct = Math.max(0, this.hp / BOSS_MAX_HP);
     const barW = 400;
@@ -73,18 +89,18 @@ export class BossEnemy extends EnemyBase {
     const bx = W / 2 - barW / 2;
     const by = 24;
 
-    this.hpBarGfx.clear();
-    this.hpBarGfx.fillStyle(0x220000, 0.9);
-    this.hpBarGfx.fillRoundedRect(bx - 2, by - 2, barW + 4, barH + 4, 6);
+    this.bossHpGfx.clear();
+    this.bossHpGfx.fillStyle(0x220000, 0.9);
+    this.bossHpGfx.fillRoundedRect(bx - 2, by - 2, barW + 4, barH + 4, 6);
     const fillColor = this.phase === 3 ? 0xff8800 : (this.phase === 2 ? 0xff4400 : 0xdd0022);
-    this.hpBarGfx.fillStyle(fillColor, 1);
-    this.hpBarGfx.fillRoundedRect(bx, by, Math.max(4, barW * pct), barH, 5);
-    this.hpBarGfx.lineStyle(2, 0xff6644, 0.7);
-    this.hpBarGfx.strokeRoundedRect(bx, by, barW, barH, 5);
+    this.bossHpGfx.fillStyle(fillColor, 1);
+    this.bossHpGfx.fillRoundedRect(bx, by, Math.max(4, barW * pct), barH, 5);
+    this.bossHpGfx.lineStyle(2, 0xff6644, 0.7);
+    this.bossHpGfx.strokeRoundedRect(bx, by, barW, barH, 5);
     // Phase markers
-    this.hpBarGfx.lineStyle(1, 0xffffff, 0.4);
-    this.hpBarGfx.lineBetween(bx + barW * (10 / 15), by, bx + barW * (10 / 15), by + barH);
-    this.hpBarGfx.lineBetween(bx + barW * (5 / 15), by, bx + barW * (5 / 15), by + barH);
+    this.bossHpGfx.lineStyle(1, 0xffffff, 0.4);
+    this.bossHpGfx.lineBetween(bx + barW * (10 / 15), by, bx + barW * (10 / 15), by + barH);
+    this.bossHpGfx.lineBetween(bx + barW * (5 / 15), by, bx + barW * (5 / 15), by + barH);
   }
 
   update(delta: number) {
@@ -145,9 +161,27 @@ export class BossEnemy extends EnemyBase {
       }
     }
 
+    // Weak point cycle
+    this.weakPointTimer += dt;
+    const inCycle = this.weakPointTimer % this.WEAK_CYCLE;
+    this.weakPointActive = inCycle < this.WEAK_OPEN;
+    this.drawWeakPoint();
+
     this.drawGlow();
     this.phaseLabel.setPosition(this.x, this.y - 60);
-    this.drawHpBar();
+    this.drawBossHpBar();
+  }
+
+  private drawWeakPoint() {
+    this.weakPointGfx.clear();
+    this.weakPointLabel.setVisible(this.weakPointActive && this.active);
+    if (!this.weakPointActive || !this.active) return;
+    const pulse = 0.5 + 0.5 * Math.abs(Math.sin(Date.now() / 160));
+    this.weakPointGfx.fillStyle(0x00ffcc, 0.7 * pulse);
+    this.weakPointGfx.fillCircle(this.x, this.y - 2, 13);
+    this.weakPointGfx.lineStyle(2, 0x00ffff, 0.9);
+    this.weakPointGfx.strokeCircle(this.x, this.y - 2, 18);
+    this.weakPointLabel.setPosition(this.x, this.y - 44);
   }
 
   private fireProjectiles() {
@@ -171,7 +205,7 @@ export class BossEnemy extends EnemyBase {
     if (!this.active) return false;
     const died = super.takeDamage(amount);
     if (!died) {
-      this.drawHpBar();
+      this.drawBossHpBar();
       this.scene.cameras.main.shake(120, 0.006);
     }
     return died;
@@ -179,8 +213,10 @@ export class BossEnemy extends EnemyBase {
 
   destroy(fromScene?: boolean) {
     this.glowGfx?.destroy();
-    this.hpBarGfx?.destroy();
+    this.bossHpGfx?.destroy();
     this.phaseLabel?.destroy();
+    this.weakPointGfx?.destroy();
+    this.weakPointLabel?.destroy();
     super.destroy(fromScene);
   }
 }

@@ -14,6 +14,13 @@ export class Level3Scene extends GameScene {
     super("Level3Scene");
   }
 
+  create() {
+    super.create();
+    this.addProximityHint(460, "\u26a0 PULSAR ahead \u2014 [E] Time Slow to dodge its shots!");
+    this.addProximityHint(900, "[Up] while touching a wall to WALL CLIMB!");
+    this.addProximityHint(1620, "\u26a0 Collapse zone \u2014 keep moving or fall through!");
+  }
+
   buildPlatforms(): PlatformDef[] {
     return [
       // Ground (lots of gaps)

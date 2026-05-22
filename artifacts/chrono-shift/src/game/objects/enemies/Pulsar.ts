@@ -48,9 +48,17 @@ export class Pulsar extends EnemyBase {
   private drawPulseRing(progress: number) {
     this.pulseGraphic.clear();
     const r = 18 + progress * 22;
-    const alpha = 0.6 * (1 - progress) * this.timeManager.getSlowMultiplier() + 0.1;
-    this.pulseGraphic.lineStyle(2, COLORS.PULSAR, alpha);
+    const isWarning = progress > 0.72;
+    const color = isWarning ? 0xff1100 : COLORS.PULSAR;
+    const baseAlpha = isWarning
+      ? 0.45 + 0.55 * Math.abs(Math.sin(Date.now() * 0.014))
+      : 0.6 * (1 - progress) * this.timeManager.getSlowMultiplier() + 0.1;
+    this.pulseGraphic.lineStyle(isWarning ? 3 : 2, color, baseAlpha);
     this.pulseGraphic.strokeCircle(this.x, this.y, r);
+    if (isWarning) {
+      this.pulseGraphic.lineStyle(1, 0xff5500, baseAlpha * 0.55);
+      this.pulseGraphic.strokeCircle(this.x, this.y, r + 10);
+    }
   }
 
   update(delta: number) {

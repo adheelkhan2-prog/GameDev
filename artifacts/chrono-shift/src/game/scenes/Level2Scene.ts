@@ -14,6 +14,13 @@ export class Level2Scene extends GameScene {
     super("Level2Scene");
   }
 
+  create() {
+    super.create();
+    this.addProximityHint(420, "[Q] DASH through gaps and past enemies!");
+    this.addProximityHint(860, "\u26a0 PHASE SHIFTER \u2014 teleports unpredictably!");
+    this.addProximityHint(2430, "\u26a0 COLLAPSE PLATFORMS \u2014 don\u2019t linger!");
+  }
+
   buildPlatforms(): PlatformDef[] {
     return [
       // Ground sections (with more gaps)

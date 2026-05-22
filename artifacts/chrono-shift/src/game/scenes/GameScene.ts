@@ -96,6 +96,12 @@ export abstract class GameScene extends Phaser.Scene {
   protected bgColor: number = COLORS.BG2;
   protected difficultyKey: DifficultyKey = "normal";
 
+  private comboCount = 0;
+  private lastKillTime = 0;
+  private readonly COMBO_WINDOW_MS = 2500;
+  protected dropOrbs: Array<{ gfx: Phaser.GameObjects.Graphics; type: "health" | "slow_boost" }> = [];
+  protected proximityHints: Array<{ x: number; text: string; triggered: boolean }> = [];
+
   private pauseContainer!: Phaser.GameObjects.Container;
   private pauseInfoText!: Phaser.GameObjects.Text;
 
@@ -128,6 +134,10 @@ export abstract class GameScene extends Phaser.Scene {
     this.collectibles = [];
     this.bossDefeated = false;
     this.boss = null;
+    this.comboCount = 0;
+    this.lastKillTime = 0;
+    this.dropOrbs = [];
+    this.proximityHints = [];
 
     this.createBackground();
     this.createPlatforms();
@@ -213,9 +223,35 @@ export abstract class GameScene extends Phaser.Scene {
   private createBackground() {
     const W = this.worldWidth;
     const H = this.worldHeight;
+    const screenW = this.scale.width;
+    const maxScroll = Math.max(0, W - screenW);
 
     this.add.rectangle(W / 2, H / 2, W, H, this.bgColor).setDepth(0);
 
+    // Far parallax layer (slowest — distant nebula dust)
+    const SF_FAR = 0.12;
+    const farW = maxScroll * SF_FAR + screenW;
+    const farGfx = this.add.graphics().setDepth(0.3).setScrollFactor(SF_FAR);
+    for (let i = 0; i < 200; i++) {
+      const x = Phaser.Math.Between(0, farW);
+      const y = Phaser.Math.Between(0, H);
+      const r = Phaser.Math.FloatBetween(0.4, 1.8);
+      farGfx.fillStyle(0x2a3d5a, Phaser.Math.FloatBetween(0.35, 0.85));
+      farGfx.fillCircle(x, y, r);
+    }
+
+    // Mid parallax layer (medium-speed — mid-field debris)
+    const SF_MID = 0.36;
+    const midW = maxScroll * SF_MID + screenW;
+    const midGfx = this.add.graphics().setDepth(0.6).setScrollFactor(SF_MID);
+    for (let i = 0; i < 70; i++) {
+      const x = Phaser.Math.Between(0, midW);
+      const y = Phaser.Math.Between(0, H);
+      midGfx.fillStyle(0x334466, Phaser.Math.FloatBetween(0.12, 0.38));
+      midGfx.fillCircle(x, y, Phaser.Math.FloatBetween(1.5, 4.5));
+    }
+
+    // Near stars (world-speed)
     const starCount = Math.floor(W / 14);
     for (let i = 0; i < starCount; i++) {
       const x = Phaser.Math.Between(0, W);
@@ -510,6 +546,8 @@ export abstract class GameScene extends Phaser.Scene {
           soundManager.stomp();
           if (died) {
             this.player.addScore(Math.round(150 * DIFFICULTY[this.difficultyKey].scoreBonus));
+            this.handleEnemyKill(enemy.x, enemy.y);
+            this.maybeSpawnDrop(enemy.x, enemy.y);
           } else {
             this.player.addScore(30);
           }
@@ -527,7 +565,7 @@ export abstract class GameScene extends Phaser.Scene {
             });
             this.time.delayedCall(300, () => em.destroy());
           } catch {}
-          if (enemy === this.boss) soundManager.bossHit();
+          if (enemy instanceof BossEnemy) soundManager.bossHit();
         } else if (!this.player.invincible && this.player.active) {
           this.player.takeDamage();
         }
@@ -557,9 +595,19 @@ export abstract class GameScene extends Phaser.Scene {
         const enemy = _enemyObj as EnemyBase;
         if (!proj.active || !enemy.active) return;
         proj.setActive(false).setVisible(false);
-        const died = enemy.takeDamage(1);
+
+        // Boss weak-point: triple damage when exposed core is active
+        let dmg = 1;
+        if (enemy instanceof BossEnemy && enemy.weakPointActive) {
+          dmg = 3;
+          this.showWeakPointFlash(enemy.x, enemy.y);
+        }
+
+        const died = enemy.takeDamage(dmg);
         if (died) {
           this.player.addScore(Math.round(100 * DIFFICULTY[this.difficultyKey].scoreBonus));
+          this.handleEnemyKill(enemy.x, enemy.y);
+          this.maybeSpawnDrop(enemy.x, enemy.y);
         }
         try {
           const em = this.add.particles(enemy.x, enemy.y, "particle", {
@@ -894,10 +942,28 @@ export abstract class GameScene extends Phaser.Scene {
 
     this.timeManager.update(delta);
     this.player.update();
+    this.checkProximityHints();
 
     // Ghost replay
     this.ghostReplayManager?.recordFrame(this.player);
     this.ghostReplayManager?.updatePlayback();
+
+    // Drop orb pickups
+    for (let i = this.dropOrbs.length - 1; i >= 0; i--) {
+      const orb = this.dropOrbs[i];
+      if (!orb.gfx || !orb.gfx.active) {
+        this.dropOrbs.splice(i, 1);
+        continue;
+      }
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x, this.player.y, orb.gfx.x, orb.gfx.y
+      );
+      if (dist < 28) {
+        this.collectDropOrb(orb.type);
+        orb.gfx.destroy();
+        this.dropOrbs.splice(i, 1);
+      }
+    }
 
     // Collectibles
     for (let i = this.collectibles.length - 1; i >= 0; i--) {
@@ -975,9 +1041,168 @@ export abstract class GameScene extends Phaser.Scene {
     );
   }
 
+  // ── Combo kill streak ──────────────────────────────────────────────────
+  private handleEnemyKill(x: number, y: number) {
+    void x; void y;
+    const now = this.time.now;
+    if (this.lastKillTime > 0 && now - this.lastKillTime < this.COMBO_WINDOW_MS) {
+      this.comboCount++;
+    } else {
+      this.comboCount = 1;
+    }
+    this.lastKillTime = now;
+    if (this.comboCount >= 2) {
+      const bonus = Math.round(this.comboCount * 60 * DIFFICULTY[this.difficultyKey].scoreBonus);
+      this.player.addScore(bonus);
+      this.uiManager?.showCombo(this.comboCount);
+      soundManager.comboKill();
+    }
+  }
+
+  // ── Enemy item drops ────────────────────────────────────────────────────
+  private maybeSpawnDrop(wx: number, wy: number) {
+    const roll = Math.random();
+    if (roll >= 0.30) return;
+    const type: "health" | "slow_boost" = roll < 0.20 ? "health" : "slow_boost";
+    const color = type === "health" ? 0xff3366 : 0x33aaff;
+    const gfx = this.add.graphics();
+    gfx.fillStyle(color, 0.9);
+    gfx.fillCircle(0, 0, 8);
+    gfx.lineStyle(2, 0xffffff, 0.55);
+    gfx.strokeCircle(0, 0, 8);
+    gfx.setPosition(wx, wy - 14).setDepth(12);
+    this.tweens.add({
+      targets: gfx,
+      y: gfx.y - 7,
+      duration: 620,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+    // Auto-destroy after 10s
+    this.time.delayedCall(10000, () => {
+      if (gfx.active) gfx.destroy();
+      const idx = this.dropOrbs.findIndex(o => o.gfx === gfx);
+      if (idx !== -1) this.dropOrbs.splice(idx, 1);
+    });
+    this.dropOrbs.push({ gfx, type });
+  }
+
+  private collectDropOrb(type: "health" | "slow_boost") {
+    if (type === "health") {
+      if (this.player.health < this.player.maxHealth) this.player.health++;
+      soundManager.healthCollect();
+      this.showPickupText("+1 HEALTH", "#ff4488");
+    } else {
+      if (!this.timeManager.slowActive && this.timeManager.slowReady) {
+        this.timeManager.activateTimeSlow();
+        this.showPickupText("TIME SLOW ACTIVATED!", "#33aaff");
+      } else {
+        this.player.addScore(Math.round(80 * DIFFICULTY[this.difficultyKey].scoreBonus));
+        this.showPickupText("+TIME SLOW BOOST", "#33aaff");
+      }
+      soundManager.itemPickup();
+    }
+  }
+
+  private showPickupText(text: string, color: string) {
+    const txt = this.add
+      .text(this.player.x, this.player.y - 30, text, {
+        fontSize: "13px",
+        fontFamily: "monospace",
+        color,
+        stroke: "#000000",
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5)
+      .setDepth(50);
+    this.tweens.add({
+      targets: txt,
+      y: txt.y - 44,
+      alpha: 0,
+      duration: 1100,
+      ease: "Power2",
+      onComplete: () => txt.destroy(),
+    });
+  }
+
+  // ── Boss weak-point hit flash ────────────────────────────────────────────
+  private showWeakPointFlash(wx: number, wy: number) {
+    const txt = this.add
+      .text(wx, wy - 22, "WEAK POINT \u00d73!", {
+        fontSize: "16px",
+        fontFamily: "monospace",
+        color: "#00ffcc",
+        stroke: "#002211",
+        strokeThickness: 3,
+        shadow: { offsetX: 0, offsetY: 0, color: "#00ffcc", blur: 10, fill: true },
+      })
+      .setOrigin(0.5)
+      .setDepth(52);
+    this.tweens.add({
+      targets: txt,
+      y: wy - 70,
+      alpha: 0,
+      duration: 1200,
+      ease: "Power2",
+      onComplete: () => txt.destroy(),
+    });
+    soundManager.weakPointHit();
+  }
+
+  // ── Proximity hint system ────────────────────────────────────────────────
+  protected addProximityHint(x: number, text: string) {
+    this.proximityHints.push({ x, text, triggered: false });
+  }
+
+  private checkProximityHints() {
+    if (!this.player) return;
+    for (const hint of this.proximityHints) {
+      if (!hint.triggered && this.player.x >= hint.x) {
+        hint.triggered = true;
+        this.showHintBanner(hint.text);
+      }
+    }
+  }
+
+  private showHintBanner(text: string) {
+    const W = this.scale.width;
+    const banner = this.add
+      .text(W / 2, 58, text, {
+        fontSize: "15px",
+        fontFamily: "monospace",
+        color: "#ffffff",
+        stroke: "#001122",
+        strokeThickness: 3,
+        backgroundColor: "#000000bb",
+        padding: { x: 14, y: 7 },
+      })
+      .setOrigin(0.5)
+      .setDepth(92)
+      .setScrollFactor(0)
+      .setAlpha(0);
+    this.tweens.add({
+      targets: banner,
+      alpha: 1,
+      duration: 320,
+      onComplete: () => {
+        this.time.delayedCall(2600, () => {
+          this.tweens.add({
+            targets: banner,
+            alpha: 0,
+            duration: 520,
+            onComplete: () => banner.destroy(),
+          });
+        });
+      },
+    });
+  }
+
   shutdown() {
     this.timeManager?.destroy();
     this.ghostReplayManager?.destroy();
     this.ghostReplayManager = null;
+    this.dropOrbs.forEach(o => { try { o.gfx?.destroy(); } catch {} });
+    this.dropOrbs = [];
   }
 }

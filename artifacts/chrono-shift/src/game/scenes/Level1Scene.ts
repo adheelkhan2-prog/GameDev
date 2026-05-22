@@ -14,6 +14,14 @@ export class Level1Scene extends GameScene {
     super("Level1Scene");
   }
 
+  create() {
+    super.create();
+    this.addProximityHint(380, "Collect all CRYSTALS \u2605 then reach the EXIT \u25ba");
+    this.addProximityHint(630, "\u26a0 SPIKES \u2014 one touch is fatal!");
+    this.addProximityHint(700, "[SPACE] JUMP  \u2022  Fall on enemies to STOMP them!");
+    this.addProximityHint(1380, "[E] TIME SLOW \u2014 slows everything around you");
+  }
+
   buildPlatforms(): PlatformDef[] {
     return [
       // Ground sections

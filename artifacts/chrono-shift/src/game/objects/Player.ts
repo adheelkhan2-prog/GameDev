@@ -275,6 +275,32 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.scene.time.delayedCall(DASH_DURATION + 60, () => trail.destroy());
     } catch {}
 
+    // Ghost trail copies
+    const ghostEvent = this.scene.time.addEvent({
+      delay: 35,
+      repeat: Math.ceil(DASH_DURATION / 35),
+      callback: () => {
+        if (!this.active) return;
+        try {
+          const ghost = this.scene.add.image(this.x, this.y, "player");
+          ghost.setFlipX(this.flipX);
+          ghost.setAlpha(0.5);
+          ghost.setTint(0x00ccff);
+          ghost.setDepth(17);
+          this.scene.tweens.add({
+            targets: ghost,
+            alpha: 0,
+            scaleX: 0.72,
+            scaleY: 0.72,
+            duration: 190,
+            ease: "Sine.easeOut",
+            onComplete: () => ghost.destroy(),
+          });
+        } catch {}
+      },
+    });
+    this.scene.time.delayedCall(DASH_DURATION + 80, () => ghostEvent.destroy());
+
     this.dashTimer?.destroy();
     this.dashTimer = this.scene.time.delayedCall(DASH_DURATION, () => {
       this.dashActive = false;

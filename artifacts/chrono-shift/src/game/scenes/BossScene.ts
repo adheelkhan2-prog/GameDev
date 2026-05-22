@@ -97,10 +97,10 @@ export class BossScene extends GameScene {
       strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101).setAlpha(0);
 
-    const hint = this.add.text(W / 2, H / 2 + 80, "STOMP THE BOSS TO DEAL DAMAGE", {
-      fontSize: "16px",
+    const hint = this.add.text(W / 2, H / 2 + 68, "STOMP to deal damage  •  [F] SHOOT the cyan WEAK POINT for ×3 damage!", {
+      fontSize: "14px",
       fontFamily: "monospace",
-      color: "#aaaaaa",
+      color: "#00ffcc",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(101).setAlpha(0);
 
     this.tweens.add({ targets: title, alpha: 1, duration: 400, ease: "Power2" });

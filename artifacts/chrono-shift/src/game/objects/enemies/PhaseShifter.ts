@@ -21,10 +21,11 @@ export class PhaseShifter extends EnemyBase {
     this.teleportInterval = PHASE_SHIFTER_TELEPORT_INTERVAL + Phaser.Math.Between(-500, 500);
     this.platformBounds = platformBounds;
     this.setGravityY(200);
+    this.initHealthBar(2);
 
     this.glowGraphic = scene.add.graphics();
     this.glowGraphic.setDepth(14);
-    this.updateGlow();
+    this.updateGlow(0);
 
     scene.tweens.add({
       targets: this.glowGraphic,
@@ -35,10 +36,17 @@ export class PhaseShifter extends EnemyBase {
     });
   }
 
-  private updateGlow() {
+  private updateGlow(progress: number) {
     this.glowGraphic.clear();
-    this.glowGraphic.fillStyle(COLORS.PHASE_SHIFTER, 0.4);
-    this.glowGraphic.fillCircle(this.x, this.y, 22);
+    const isWarning = progress > 0.72;
+    const color = isWarning ? 0xff2200 : COLORS.PHASE_SHIFTER;
+    const radius = isWarning ? 26 + Math.sin(Date.now() / 80) * 3 : 22;
+    this.glowGraphic.fillStyle(color, 0.4);
+    this.glowGraphic.fillCircle(this.x, this.y, radius);
+    if (isWarning) {
+      this.glowGraphic.lineStyle(2, 0xff5500, 0.8);
+      this.glowGraphic.strokeCircle(this.x, this.y, radius + 9);
+    }
   }
 
   update(delta: number) {
@@ -52,7 +60,9 @@ export class PhaseShifter extends EnemyBase {
       this.teleportToPlatform();
     }
 
-    this.updateGlow();
+    const progress = this.teleportTimer / this.teleportInterval;
+    this.updateGlow(progress);
+    this.drawHpBar();
   }
 
   private teleportToPlatform() {
@@ -62,7 +72,6 @@ export class PhaseShifter extends EnemyBase {
     const newX = platform.x + Phaser.Math.Between(20, Math.max(20, platform.w - 20));
     const newY = platform.y - 20;
 
-    // Teleport flash effect
     this.blinkTween?.stop();
     this.setAlpha(0);
     this.blinkTween = this.scene.tweens.add({
@@ -72,7 +81,6 @@ export class PhaseShifter extends EnemyBase {
       ease: "Power2",
     });
 
-    // Teleport particles at old position
     try {
       const emitter = this.scene.add.particles(this.x, this.y, "particle", {
         speed: { min: 50, max: 150 },
@@ -91,7 +99,6 @@ export class PhaseShifter extends EnemyBase {
       (this.body as Phaser.Physics.Arcade.Body).reset(newX, newY);
     }
 
-    // Teleport particles at new position
     try {
       const emitter2 = this.scene.add.particles(newX, newY, "particle", {
         speed: { min: 40, max: 120 },
