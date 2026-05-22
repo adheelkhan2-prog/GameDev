@@ -20,6 +20,7 @@ export class GhostReplayManager {
   private ghostGfx: Phaser.GameObjects.Graphics | null = null;
   private playbackFrames: GhostFrame[] = [];
   private playbackIdx = 0;
+  private playbackTickCounter = 0;
   private playing = false;
 
   constructor(scene: Phaser.Scene, levelNumber: number) {
@@ -65,12 +66,16 @@ export class GhostReplayManager {
     if (!this.playing || !this.ghostGfx || this.playbackFrames.length === 0) return;
     const frame = this.playbackFrames[this.playbackIdx];
     if (frame) this.renderGhost(frame.x, frame.y, frame.flipX);
-    this.playbackIdx++;
-    if (this.playbackIdx >= this.playbackFrames.length) {
-      this.playing = false;
-      this.ghostGfx?.clear();
-      this.ghostGfx?.destroy();
-      this.ghostGfx = null;
+    this.playbackTickCounter++;
+    if (this.playbackTickCounter >= RECORD_EVERY) {
+      this.playbackTickCounter = 0;
+      this.playbackIdx++;
+      if (this.playbackIdx >= this.playbackFrames.length) {
+        this.playing = false;
+        this.ghostGfx?.clear();
+        this.ghostGfx?.destroy();
+        this.ghostGfx = null;
+      }
     }
   }
 
