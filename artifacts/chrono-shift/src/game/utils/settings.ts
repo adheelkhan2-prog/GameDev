@@ -11,7 +11,7 @@ export interface GameSettings {
   unlockedAbilities: UnlockedAbilities;
 }
 
-const KEY = "chrono_shift_settings";
+const KEY = "chrono_shift_settings_v2";
 
 const DEFAULT_ABILITIES: UnlockedAbilities = {
   doubleJump: false,
@@ -62,6 +62,12 @@ export function unlockAbility(ability: keyof UnlockedAbilities): void {
     s.unlockedAbilities[ability] = true;
     saveSettings(s);
   }
+}
+
+export function resetAbilities(): void {
+  const s = getSettings();
+  s.unlockedAbilities = { ...DEFAULT_ABILITIES };
+  saveSettings(s);
 }
 
 export function hasCutscenePlayed(): boolean {
