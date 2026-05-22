@@ -71,11 +71,11 @@ export class Level5Scene extends GameScene {
 
   buildCollectibles(): CollectibleDef[] {
     return [
-      { x: 660,  y: 370 },
+      { x: 610,  y: 350 },
       { x: 1220, y: 450 },
       { x: 1900, y: 210 },
       { x: 3040, y: 190 },
-      { x: 3750, y: 350 },
+      { x: 3820, y: 325 },
     ];
   }
 

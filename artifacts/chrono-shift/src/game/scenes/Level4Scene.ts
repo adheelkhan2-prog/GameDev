@@ -92,7 +92,7 @@ export class Level4Scene extends GameScene {
   buildCollectibles(): CollectibleDef[] {
     return [
       { x: 470,  y: 460 },
-      { x: 1140, y: 330 },
+      { x: 1200, y: 305 },
       { x: 1930, y: 370 },
       { x: 2480, y: 290 },
       { x: 3440, y: 290 },
@@ -127,13 +127,19 @@ export class Level4Scene extends GameScene {
 
   private wavesSpawned = 0;
 
+  create(): void {
+    this.wavesSpawned = 0;
+    super.create();
+    this.time.delayedCall(700, () => this.showShootHint());
+  }
+
   update(time: number, delta: number): void {
     super.update(time, delta);
     this.checkEnemyWaves();
   }
 
   private checkEnemyWaves(): void {
-    if (!this.player || this.levelComplete || this.gameOver) return;
+    if (!this.player || this.levelComplete || this.gameOver || this.paused) return;
     while (
       this.wavesSpawned < WAVE_CHECKPOINTS.length &&
       this.player.x >= WAVE_CHECKPOINTS[this.wavesSpawned]
@@ -144,6 +150,40 @@ export class Level4Scene extends GameScene {
       this.showWaveAlert();
       this.wavesSpawned++;
     }
+  }
+
+  private showShootHint(): void {
+    const W = this.scale.width;
+    const banner = this.add
+      .text(W / 2, 76, "★  NEW ABILITY: Press [F] to SHOOT  ★", {
+        fontSize: "17px",
+        fontFamily: "monospace",
+        color: "#00ffcc",
+        stroke: "#003322",
+        strokeThickness: 3,
+        backgroundColor: "#000000dd",
+        padding: { x: 14, y: 7 },
+      })
+      .setOrigin(0.5)
+      .setDepth(92)
+      .setScrollFactor(0)
+      .setAlpha(0);
+
+    this.tweens.add({
+      targets: banner,
+      alpha: 1,
+      duration: 400,
+      onComplete: () => {
+        this.time.delayedCall(3200, () => {
+          this.tweens.add({
+            targets: banner,
+            alpha: 0,
+            duration: 600,
+            onComplete: () => banner.destroy(),
+          });
+        });
+      },
+    });
   }
 
   private showWaveAlert(): void {

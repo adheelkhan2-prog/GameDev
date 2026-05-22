@@ -182,7 +182,7 @@ export class LevelCompleteScene extends Phaser.Scene {
     if (level === 3 && !abilities.wallClimb) {
       unlockAbility("wallClimb");
       soundManager.abilityUnlock();
-      return "WALL CLIMB";
+      return "SHOOT  [F]";
     }
     return null;
   }
