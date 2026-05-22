@@ -67,7 +67,10 @@ export class GhostReplayManager {
     if (frame) this.renderGhost(frame.x, frame.y, frame.flipX);
     this.playbackIdx++;
     if (this.playbackIdx >= this.playbackFrames.length) {
-      this.playbackIdx = 0;
+      this.playing = false;
+      this.ghostGfx?.clear();
+      this.ghostGfx?.destroy();
+      this.ghostGfx = null;
     }
   }
 

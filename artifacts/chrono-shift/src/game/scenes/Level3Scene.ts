@@ -140,15 +140,15 @@ export class Level3Scene extends GameScene {
 
   buildSpikes(): SpikeDef[] {
     return [
-      { x: 320,  y: 656, count: 6 },
-      { x: 700,  y: 656, count: 4 },
-      { x: 1080, y: 656, count: 4 },
-      { x: 1440, y: 656, count: 3 },
-      { x: 1860, y: 656, count: 3 },
-      { x: 2240, y: 656, count: 4 },
-      { x: 2620, y: 656, count: 4 },
-      { x: 3060, y: 656, count: 4 },
-      { x: 3400, y: 656, count: 3 },
+      { x: 320,  y: 668, count: 6 },
+      { x: 700,  y: 668, count: 4 },
+      { x: 1080, y: 668, count: 4 },
+      { x: 1440, y: 668, count: 3 },
+      { x: 1860, y: 668, count: 3 },
+      { x: 2240, y: 668, count: 4 },
+      { x: 2620, y: 668, count: 4 },
+      { x: 3060, y: 668, count: 4 },
+      { x: 3400, y: 668, count: 3 },
     ];
   }
 

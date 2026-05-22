@@ -48,17 +48,24 @@ export class Level5Scene extends GameScene {
   buildEnemies(): EnemyDef[] {
     return [
       { type: "drone",         x: 500,  y: 450, patrolMin: 380,  patrolMax: 780  },
+      { type: "chaser",        x: 660,  y: 610, patrolMin: 580,  patrolMax: 960  },
       { type: "pulsar",        x: 800,  y: 290 },
       { type: "chaser",        x: 1050, y: 610, patrolMin: 980,  patrolMax: 1350 },
+      { type: "phase_shifter", x: 1200, y: 450 },
       { type: "phase_shifter", x: 1480, y: 600 },
       { type: "pulsar",        x: 1680, y: 290 },
+      { type: "chaser",        x: 1900, y: 610, patrolMin: 1820, patrolMax: 2200 },
+      { type: "drone",         x: 2030, y: 290, patrolMin: 2020, patrolMax: 2420 },
       { type: "chaser",        x: 2100, y: 610, patrolMin: 2020, patrolMax: 2430 },
       { type: "drone",         x: 2350, y: 450, patrolMin: 2240, patrolMax: 2650 },
+      { type: "phase_shifter", x: 2680, y: 350 },
+      { type: "chaser",        x: 2750, y: 610, patrolMin: 2660, patrolMax: 2980 },
       { type: "pulsar",        x: 2990, y: 190 },
       { type: "phase_shifter", x: 3200, y: 600 },
       { type: "chaser",        x: 3500, y: 610, patrolMin: 3380, patrolMax: 3880 },
       { type: "drone",         x: 3750, y: 350, patrolMin: 3480, patrolMax: 3980 },
       { type: "pulsar",        x: 3880, y: 430 },
+      { type: "chaser",        x: 3980, y: 610, patrolMin: 3880, patrolMax: 4180 },
     ];
   }
 
@@ -74,11 +81,23 @@ export class Level5Scene extends GameScene {
 
   buildSpikes(): SpikeDef[] {
     return [
-      { x: 720,  y: 628, count: 3 },
-      { x: 1320, y: 628, count: 4 },
-      { x: 2340, y: 628, count: 3 },
-      { x: 3260, y: 628, count: 4 },
-      { x: 3700, y: 628, count: 3 },
+      // Floor spikes (ground top = 640-40 = 600)
+      { x: 720,  y: 600, count: 3 },
+      { x: 1320, y: 600, count: 4 },
+      { x: 2340, y: 600, count: 4 },
+      { x: 3060, y: 600, count: 3 },
+      { x: 3700, y: 600, count: 4 },
+      // Elevated platform spikes
+      // Platform { x:600, y:400, h:22 } → top = 400-11 = 389
+      { x: 660,  y: 389, count: 1 },
+      // Platform { x:1580, y:320, h:22 } → top = 320-11 = 309
+      { x: 1640, y: 309, count: 2 },
+      // Platform { x:2240, y:400, h:22 } → top = 400-11 = 389
+      { x: 2280, y: 389, count: 2 },
+      // Platform { x:3480, y:300, h:22 } → top = 300-11 = 289
+      { x: 3530, y: 289, count: 2 },
+      // Platform { x:3700, y:380, h:22 } → top = 380-11 = 369
+      { x: 3740, y: 369, count: 2 },
     ];
   }
 

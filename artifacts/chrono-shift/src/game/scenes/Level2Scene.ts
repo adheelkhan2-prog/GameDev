@@ -110,12 +110,12 @@ export class Level2Scene extends GameScene {
 
   buildSpikes(): SpikeDef[] {
     return [
-      { x: 488,  y: 656, count: 4 },
-      { x: 900,  y: 656, count: 3 },
-      { x: 1380, y: 656, count: 3 },
-      { x: 1800, y: 656, count: 4 },
-      { x: 2320, y: 656, count: 4 },
-      { x: 2750, y: 656, count: 2 },
+      { x: 488,  y: 668, count: 4 },
+      { x: 900,  y: 668, count: 3 },
+      { x: 1380, y: 668, count: 3 },
+      { x: 1800, y: 668, count: 4 },
+      { x: 2320, y: 668, count: 4 },
+      { x: 2750, y: 668, count: 2 },
     ];
   }
 

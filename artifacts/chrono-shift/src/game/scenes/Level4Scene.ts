@@ -51,13 +51,18 @@ export class Level4Scene extends GameScene {
       { type: "drone",         x: 460,  y: 470, patrolMin: 380,  patrolMax: 720  },
       { type: "chaser",        x: 850,  y: 610, patrolMin: 750,  patrolMax: 1060 },
       { type: "phase_shifter", x: 1200, y: 600 },
+      { type: "chaser",        x: 1380, y: 610, patrolMin: 1300, patrolMax: 1700 },
       { type: "drone",         x: 1560, y: 330, patrolMin: 1480, patrolMax: 1850 },
+      { type: "pulsar",        x: 1870, y: 310 },
       { type: "chaser",        x: 1980, y: 610, patrolMin: 1860, patrolMax: 2280 },
+      { type: "phase_shifter", x: 2110, y: 380 },
       { type: "pulsar",        x: 2440, y: 290 },
+      { type: "chaser",        x: 2660, y: 610, patrolMin: 2550, patrolMax: 2850 },
       { type: "phase_shifter", x: 2700, y: 600 },
       { type: "drone",         x: 2920, y: 350, patrolMin: 2850, patrolMax: 3200 },
       { type: "chaser",        x: 3150, y: 610, patrolMin: 3000, patrolMax: 3400 },
       { type: "pulsar",        x: 3280, y: 230 },
+      { type: "chaser",        x: 3450, y: 610, patrolMin: 3380, patrolMax: 3650 },
     ];
   }
 
@@ -73,10 +78,20 @@ export class Level4Scene extends GameScene {
 
   buildSpikes(): SpikeDef[] {
     return [
-      { x: 660,  y: 628, count: 3 },
-      { x: 1420, y: 628, count: 4 },
-      { x: 2200, y: 628, count: 3 },
-      { x: 3100, y: 628, count: 4 },
+      // Floor spikes (ground top = 640-40 = 600)
+      { x: 660,  y: 600, count: 3 },
+      { x: 1420, y: 600, count: 4 },
+      { x: 2200, y: 600, count: 3 },
+      { x: 3100, y: 600, count: 4 },
+      // Elevated platform spikes
+      // Platform { x:1060, y:360, h:22 } → top = 360-11 = 349
+      { x: 1110, y: 349, count: 2 },
+      // Platform { x:1860, y:340, h:22 } → top = 340-11 = 329
+      { x: 1900, y: 329, count: 2 },
+      // Platform { x:3020, y:320, h:22 } → top = 320-11 = 309
+      { x: 3060, y: 309, count: 2 },
+      // Platform { x:2650, y:440, h:22 } → top = 440-11 = 429
+      { x: 2700, y: 429, count: 1 },
     ];
   }
 

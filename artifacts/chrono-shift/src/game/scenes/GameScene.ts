@@ -269,7 +269,7 @@ export abstract class GameScene extends Phaser.Scene {
       for (let i = 0; i < count; i++) {
         const spike = this.physics.add.staticImage(
           def.x + i * 16 + 8,
-          def.y,
+          def.y - 14,
           "spike"
         );
         spike.setDepth(8);
