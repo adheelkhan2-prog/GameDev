@@ -89,6 +89,15 @@ export class Level2Scene extends GameScene {
 
       // One Pulsar
       { type: "pulsar", x: 1200, y: 270, fireAngle: 180 },
+
+      // doubled
+      { type: "drone",         x: 280,  y: 480, patrolMin: 200,  patrolMax: 520  },
+      { type: "drone",         x: 1080, y: 520, patrolMin: 1020, patrolMax: 1220 },
+      { type: "drone",         x: 2420, y: 540, patrolMin: 2380, patrolMax: 2620 },
+      { type: "phase_shifter", x: 420,  y: 400 },
+      { type: "phase_shifter", x: 1340, y: 360 },
+      { type: "phase_shifter", x: 2700, y: 380 },
+      { type: "pulsar",        x: 960,  y: 310, fireAngle: 270  },
     ];
   }
 

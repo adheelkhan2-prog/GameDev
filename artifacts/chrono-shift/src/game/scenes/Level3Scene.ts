@@ -101,7 +101,7 @@ export class Level3Scene extends GameScene {
   buildEnemies(): EnemyDef[] {
     return [
       // Drones
-      { type: "drone", x: 480,  y: 560, patrolMin: 440, patrolMax: 620  },
+      { type: "drone", x: 480,  y: 560, patrolMin: 440,  patrolMax: 620  },
       { type: "drone", x: 1880, y: 540, patrolMin: 1880, patrolMax: 2020 },
       { type: "drone", x: 3380, y: 460, patrolMin: 3380, patrolMax: 3560 },
 
@@ -116,6 +116,19 @@ export class Level3Scene extends GameScene {
       { type: "pulsar", x: 2300, y: 215, fireAngle: 225 },
       { type: "pulsar", x: 2700, y: 215, fireAngle: 135 },
       { type: "pulsar", x: 3100, y: 375, fireAngle: 200 },
+
+      // doubled
+      { type: "drone",         x: 580,  y: 480, patrolMin: 480,  patrolMax: 700  },
+      { type: "drone",         x: 2860, y: 540, patrolMin: 2800, patrolMax: 3020 },
+      { type: "drone",         x: 3480, y: 540, patrolMin: 3380, patrolMax: 3640 },
+      { type: "phase_shifter", x: 340,  y: 400 },
+      { type: "phase_shifter", x: 2580, y: 460 },
+      { type: "phase_shifter", x: 3000, y: 380 },
+      { type: "pulsar",        x: 800,  y: 315, fireAngle: 225 },
+      { type: "pulsar",        x: 1100, y: 235, fireAngle: 180 },
+      { type: "pulsar",        x: 2200, y: 295, fireAngle: 270 },
+      { type: "pulsar",        x: 2580, y: 295, fireAngle: 135 },
+      { type: "pulsar",        x: 3380, y: 455, fireAngle: 200 },
     ];
   }
 

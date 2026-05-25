@@ -6,21 +6,36 @@ const WAVE_DEFS: EnemyDef[][] = [
   [
     { type: "chaser", x: 1350, y: 610, patrolMin: 1200, patrolMax: 1700 },
     { type: "chaser", x: 1650, y: 610, patrolMin: 1500, patrolMax: 1900 },
+    // doubled
+    { type: "chaser",        x: 1250, y: 610, patrolMin: 1200, patrolMax: 1600 },
+    { type: "phase_shifter", x: 1700, y: 600 },
   ],
   [
     { type: "drone",  x: 2050, y: 380, patrolMin: 2000, patrolMax: 2300 },
     { type: "chaser", x: 2150, y: 610, patrolMin: 2000, patrolMax: 2450 },
     { type: "chaser", x: 2450, y: 610, patrolMin: 2300, patrolMax: 2700 },
+    // doubled
+    { type: "drone",  x: 2200, y: 380, patrolMin: 2050, patrolMax: 2380 },
+    { type: "chaser", x: 2350, y: 610, patrolMin: 2100, patrolMax: 2600 },
+    { type: "chaser", x: 2600, y: 610, patrolMin: 2400, patrolMax: 2780 },
   ],
   [
     { type: "chaser",        x: 2900, y: 610, patrolMin: 2800, patrolMax: 3200 },
     { type: "phase_shifter", x: 2960, y: 600 },
     { type: "chaser",        x: 3150, y: 610, patrolMin: 3000, patrolMax: 3450 },
+    // doubled
+    { type: "chaser",        x: 3000, y: 610, patrolMin: 2850, patrolMax: 3300 },
+    { type: "phase_shifter", x: 3050, y: 600 },
+    { type: "chaser",        x: 3250, y: 610, patrolMin: 3100, patrolMax: 3500 },
   ],
   [
     { type: "chaser", x: 3450, y: 610, patrolMin: 3400, patrolMax: 3700 },
     { type: "drone",  x: 3550, y: 350, patrolMin: 3400, patrolMax: 3750 },
     { type: "chaser", x: 3650, y: 610, patrolMin: 3550, patrolMax: 3800 },
+    // doubled
+    { type: "chaser",        x: 3500, y: 610, patrolMin: 3420, patrolMax: 3720 },
+    { type: "drone",         x: 3600, y: 350, patrolMin: 3430, patrolMax: 3760 },
+    { type: "phase_shifter", x: 3580, y: 600 },
   ],
 ];
 
@@ -86,6 +101,22 @@ export class Level4Scene extends GameScene {
       { type: "chaser",        x: 3150, y: 610, patrolMin: 3000, patrolMax: 3400 },
       { type: "pulsar",        x: 3280, y: 230 },
       { type: "chaser",        x: 3450, y: 610, patrolMin: 3380, patrolMax: 3650 },
+      // doubled
+      { type: "drone",         x: 200,  y: 530, patrolMin: 100,  patrolMax: 540  },
+      { type: "chaser",        x: 620,  y: 610, patrolMin: 500,  patrolMax: 800  },
+      { type: "drone",         x: 1100, y: 330, patrolMin: 1060, patrolMax: 1300 },
+      { type: "chaser",        x: 960,  y: 610, patrolMin: 860,  patrolMax: 1180 },
+      { type: "phase_shifter", x: 1500, y: 330 },
+      { type: "chaser",        x: 1780, y: 610, patrolMin: 1700, patrolMax: 2000 },
+      { type: "pulsar",        x: 1490, y: 329 },
+      { type: "chaser",        x: 2250, y: 610, patrolMin: 2100, patrolMax: 2530 },
+      { type: "drone",         x: 2060, y: 380, patrolMin: 2000, patrolMax: 2290 },
+      { type: "chaser",        x: 2800, y: 610, patrolMin: 2700, patrolMax: 3050 },
+      { type: "phase_shifter", x: 2870, y: 350 },
+      { type: "drone",         x: 3080, y: 290, patrolMin: 3020, patrolMax: 3380 },
+      { type: "chaser",        x: 3300, y: 610, patrolMin: 3150, patrolMax: 3500 },
+      { type: "pulsar",        x: 3400, y: 289 },
+      { type: "phase_shifter", x: 3580, y: 370 },
     ];
   }
 

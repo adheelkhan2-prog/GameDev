@@ -59,8 +59,11 @@ export class Level1Scene extends GameScene {
 
   buildEnemies(): EnemyDef[] {
     return [
-      { type: "drone", x: 720, y: 560, patrolMin: 720, patrolMax: 880 },
+      { type: "drone", x: 720,  y: 560, patrolMin: 720,  patrolMax: 880  },
       { type: "drone", x: 1380, y: 460, patrolMin: 1380, patrolMax: 1540 },
+      // doubled
+      { type: "drone", x: 300,  y: 500, patrolMin: 80,   patrolMax: 460  },
+      { type: "drone", x: 1960, y: 480, patrolMin: 1780, patrolMax: 2100 },
     ];
   }
 
