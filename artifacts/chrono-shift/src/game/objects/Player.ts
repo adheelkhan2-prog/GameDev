@@ -23,7 +23,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private keyD!: Phaser.Input.Keyboard.Key;
   private keySpace!: Phaser.Input.Keyboard.Key;
   private keyE!: Phaser.Input.Keyboard.Key;
-  private keyR!: Phaser.Input.Keyboard.Key;
   private keyW!: Phaser.Input.Keyboard.Key;
   private keyQ!: Phaser.Input.Keyboard.Key;
   private keyF!: Phaser.Input.Keyboard.Key;
@@ -110,15 +109,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.keyW = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W);
     this.keySpace = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.keyE = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.E);
-    this.keyR = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.R);
     this.keyQ = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.Q);
     this.keyF = scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.F);
 
     scene.input.keyboard!.on("keydown-E", () => {
       this.timeManager.activateTimeSlow();
-    });
-    scene.input.keyboard!.on("keydown-R", () => {
-      this.timeManager.activateTimeRewind();
     });
   }
 
@@ -131,7 +126,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   update() {
-    if (!this.active || this.timeManager.rewindActive) return;
+    if (!this.active) return;
 
     const body = this.body as Phaser.Physics.Arcade.Body;
     const onGround = body.blocked.down;

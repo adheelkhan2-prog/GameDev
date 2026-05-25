@@ -28,8 +28,7 @@ const PANELS = [
     title: "YOUR TOOLS",
     lines: [
       "[E]  TIME SLOW  —  freeze the temporal field around you.",
-      "[R]  TIME REWIND  —  roll back the last two seconds.",
-      "Master both to survive what awaits.",
+      "Master it to survive what awaits.",
     ],
     titleColor: "#66aaff",
     bgColor: 0x00050f,

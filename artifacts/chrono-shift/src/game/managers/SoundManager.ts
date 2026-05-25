@@ -204,18 +204,6 @@ class SoundManager {
     this.osc("sine", 330, t + 0.05, 0.2, 0.1, 0.01, 0.15, 550);
   }
 
-  timeRewind() {
-    const ctx = this.getCtx();
-    if (!ctx) return;
-    const t = ctx.currentTime;
-    for (let i = 0; i < 6; i++) {
-      this.osc("square", 600 + i * 80, t + i * 0.05, 0.06, 0.14, 0.001, 0.04);
-    }
-    this.osc("sine", 1200, t, 0.3, 0.18, 0.005, 0.2, 300);
-    this.noise(t, 0.3, 0.15, 1200, 4);
-    this.osc("sine", 60, t + 0.05, 0.25, 0.35, 0.005, 0.15);
-  }
-
   allCrystals() {
     const ctx = this.getCtx();
     if (!ctx) return;

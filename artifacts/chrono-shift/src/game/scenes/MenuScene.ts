@@ -133,7 +133,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Control hint
     this.add
-      .text(W / 2, H - 60, "WASD/Arrows=move  •  Space=jump  •  E=Slow  •  R=Rewind  •  Q=Dash  •  ESC=Pause", {
+      .text(W / 2, H - 60, "WASD/Arrows=move  •  Space=jump  •  E=Slow  •  Q=Dash  •  ESC=Pause", {
         fontSize: "13px",
         fontFamily: "monospace",
         color: "#446677",
@@ -670,9 +670,7 @@ export class MenuScene extends Phaser.Scene {
       { text: "TIME ABILITIES", color: "#ffee44", size: "20px", y: -55 },
       { text: "E  —  Time Slow (5s active, 3s cooldown)", color: "#66aaff", size: "16px", y: -28 },
       { text: "      Enemies slow to 20% speed. You move normally.", color: "#557799", size: "14px", y: -8 },
-      { text: "R  —  Time Rewind (rewinds enemies 2s)", color: "#ff88aa", size: "16px", y: 18 },
-      { text: "      Sends enemies back in time. Cooldown 4s.", color: "#775566", size: "14px", y: 38 },
-      { text: "─────────────────────────────────", color: "#224455", size: "16px", y: 66 },
+      { text: "─────────────────────────────────", color: "#224455", size: "16px", y: 18 },
       { text: "OBJECTIVE", color: "#ffee44", size: "20px", y: 92 },
       { text: "Collect all 5 golden crystals in each level,", color: "#aaccee", size: "16px", y: 118 },
       { text: "then reach the glowing EXIT portal.", color: "#aaccee", size: "16px", y: 140 },

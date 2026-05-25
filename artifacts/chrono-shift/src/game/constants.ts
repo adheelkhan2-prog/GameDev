@@ -7,9 +7,6 @@ export const TIME_SLOW_DURATION = 5000;
 export const TIME_SLOW_COOLDOWN = 3000;
 export const TIME_SLOW_SCALE = 0.2;
 
-export const TIME_REWIND_DURATION = 2000;
-export const TIME_REWIND_COOLDOWN = 4000;
-export const TIME_REWIND_HISTORY = 120;
 
 export const CRYSTALS_PER_LEVEL = 5;
 

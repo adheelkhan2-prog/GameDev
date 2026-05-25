@@ -95,8 +95,6 @@ export abstract class EnemyBase extends Phaser.Physics.Arcade.Sprite {
     } catch {}
   }
 
-  hitByRewind() {}
-
   destroy(fromScene?: boolean) {
     this.hpBarGfx?.destroy();
     super.destroy(fromScene);

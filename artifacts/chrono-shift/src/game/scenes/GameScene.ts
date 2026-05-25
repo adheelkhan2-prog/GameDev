@@ -419,7 +419,6 @@ export abstract class GameScene extends Phaser.Scene {
           def.patrolMax ?? def.x + 150
         );
         drone.baseSpeedMultiplier = diff.enemySpeed;
-        this.timeManager.register(drone);
         enemy = drone;
       } else if (def.type === "phase_shifter") {
         const ps = new PhaseShifter(
@@ -431,7 +430,6 @@ export abstract class GameScene extends Phaser.Scene {
         );
         (ps as EnemyBase & { baseSpeedMultiplier?: number }).baseSpeedMultiplier =
           diff.enemySpeed;
-        this.timeManager.register(ps);
         enemy = ps;
       } else if (def.type === "chaser") {
         const chaser = new ChaserEnemy(
@@ -866,14 +864,12 @@ export abstract class GameScene extends Phaser.Scene {
         def.patrolMin ?? def.x - 150, def.patrolMax ?? def.x + 150
       );
       drone.baseSpeedMultiplier = diff.enemySpeed;
-      this.timeManager.register(drone);
       enemy = drone;
     } else if (def.type === "phase_shifter") {
       const ps = new PhaseShifter(
         this, def.x, def.y, this.timeManager, platformBounds
       );
       (ps as EnemyBase & { baseSpeedMultiplier?: number }).baseSpeedMultiplier = diff.enemySpeed;
-      this.timeManager.register(ps);
       enemy = ps;
     } else if (def.type === "chaser") {
       const chaser = new ChaserEnemy(

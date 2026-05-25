@@ -3,7 +3,6 @@ import { TimeManager } from "./TimeManager";
 import {
   TIME_SLOW_DURATION,
   TIME_SLOW_COOLDOWN,
-  TIME_REWIND_COOLDOWN,
   DASH_COOLDOWN,
   PLAYER_SHOOT_COOLDOWN,
   COLORS,
@@ -38,10 +37,6 @@ export class UIManager {
   private slowLabel!: Phaser.GameObjects.Text;
   private slowBar!: Phaser.GameObjects.Graphics;
   private slowStatus!: Phaser.GameObjects.Text;
-
-  private rewindLabel!: Phaser.GameObjects.Text;
-  private rewindBar!: Phaser.GameObjects.Graphics;
-  private rewindStatus!: Phaser.GameObjects.Text;
 
   private dashLabel: Phaser.GameObjects.Text | null = null;
   private dashBar: Phaser.GameObjects.Graphics | null = null;
@@ -104,7 +99,7 @@ export class UIManager {
     const H = this.scene.scale.height;
 
     const anyAbility = this.abilities.doubleJump || this.abilities.dash || this.abilities.wallClimb;
-    const panelH = 90 + (this.abilities.dash ? 30 : 0) + (this.abilities.shoot ? 30 : 0) + (anyAbility ? 24 : 0);
+    const panelH = 56 + (this.abilities.dash ? 30 : 0) + (this.abilities.shoot ? 30 : 0) + (anyAbility ? 24 : 0);
 
     // ── Top-left panel ──
     const panelBg = this.scene.add.graphics();
@@ -176,23 +171,6 @@ export class UIManager {
     this.slowBar.setDepth(91).setScrollFactor(0);
 
     this.slowStatus = this.scene.add
-      .text(14, rowY + 16, "READY", {
-        fontSize: "11px", fontFamily: "monospace", color: "#44ff88",
-      })
-      .setDepth(91).setScrollFactor(0);
-
-    rowY += 34;
-
-    this.rewindLabel = this.scene.add
-      .text(14, rowY, "[R] TIME REWIND", {
-        fontSize: "13px", fontFamily: "monospace", color: "#ff88aa",
-      })
-      .setDepth(91).setScrollFactor(0);
-
-    this.rewindBar = this.scene.add.graphics();
-    this.rewindBar.setDepth(91).setScrollFactor(0);
-
-    this.rewindStatus = this.scene.add
       .text(14, rowY + 16, "READY", {
         fontSize: "11px", fontFamily: "monospace", color: "#44ff88",
       })
@@ -396,7 +374,7 @@ export class UIManager {
   private updateAbilityBars(dashCooldownRemaining = 0, dashActive = false, shootCooldownRemaining = 0) {
     const H = this.scene.scale.height;
     const anyAbility = this.abilities.doubleJump || this.abilities.dash || this.abilities.wallClimb;
-    const panelH = 90 + (this.abilities.dash ? 30 : 0) + (this.abilities.shoot ? 30 : 0) + (anyAbility ? 24 : 0);
+    const panelH = 56 + (this.abilities.dash ? 30 : 0) + (this.abilities.shoot ? 30 : 0) + (anyAbility ? 24 : 0);
     const rowY0 = H - panelH + 4;
     const barW = 155;
     const barH = 5;
@@ -427,32 +405,10 @@ export class UIManager {
     );
 
     const rowY1 = rowY0 + 34;
-    // Rewind bar
-    this.rewindBar.clear();
-    this.rewindBar.fillStyle(0x223355, 1);
-    this.rewindBar.fillRect(73, rowY1 + 16, barW, barH);
-    let rewindFill = 0, rewindColor = 0x44ff88, rewindStatusText = "READY";
-    if (this.timeManager.rewindActive) {
-      rewindFill = 1; rewindColor = 0xff44aa; rewindStatusText = "REWINDING...";
-    } else if (!this.timeManager.rewindReady) {
-      rewindFill = 1 - this.timeManager.rewindCooldownRemaining / TIME_REWIND_COOLDOWN;
-      rewindColor = 0xff6600;
-      rewindStatusText = `CD ${Math.ceil(this.timeManager.rewindCooldownRemaining / 1000)}s`;
-    } else {
-      rewindFill = 1;
-    }
-    this.rewindBar.fillStyle(rewindColor, 1);
-    this.rewindBar.fillRect(73, rowY1 + 16, barW * rewindFill, barH);
-    this.rewindStatus.setPosition(14, rowY1 + 16);
-    this.rewindStatus.setText(rewindStatusText);
-    this.rewindStatus.setColor(
-      this.timeManager.rewindReady && !this.timeManager.rewindActive ? "#44ff88" :
-      this.timeManager.rewindActive ? "#ff88cc" : "#ff8844"
-    );
 
     // Dash bar (if unlocked)
     if (this.abilities.dash && this.dashBar && this.dashStatus && this.dashLabel) {
-      const rowY2 = rowY1 + 34;
+      const rowY2 = rowY1;
       this.dashLabel.setPosition(14, rowY2);
       this.dashBar.clear();
       this.dashBar.fillStyle(0x223355, 1);
@@ -475,7 +431,7 @@ export class UIManager {
     }
 
     // Shoot bar (if unlocked)
-    const shootRowY = rowY1 + 34 + (this.abilities.dash ? 34 : 0);
+    const shootRowY = rowY1 + (this.abilities.dash ? 34 : 0);
     if (this.abilities.shoot && this.shootBar && this.shootStatus && this.shootLabel) {
       this.shootLabel.setPosition(14, shootRowY);
       this.shootBar.clear();
