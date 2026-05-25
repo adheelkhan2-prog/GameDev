@@ -228,7 +228,7 @@ export class MenuScene extends Phaser.Scene {
     const H = this.scale.height;
 
     const panelW = 540;
-    const panelH = 450;
+    const panelH = 370;
     const px = W / 2 - panelW / 2;
     const py = H / 2 - panelH / 2;
 
@@ -419,61 +419,12 @@ export class MenuScene extends Phaser.Scene {
     this.scale.on("enterfullscreen",  refreshFs);
     this.scale.on("leavefullscreen",  refreshFs);
 
-    // ── DIFFICULTY ───────────────────────────────────────────────────
-    addText(px + 32, py + 278, "DIFFICULTY", {
-      fontSize: "16px", fontFamily: "monospace", color: "#aaaacc",
-    });
-
-    const diffOptions: Array<{ key: "easy" | "normal" | "hard"; label: string; color: string }> = [
-      { key: "easy",   label: "EASY",   color: "#44ff88" },
-      { key: "normal", label: "NORMAL", color: "#ffee44" },
-      { key: "hard",   label: "HARD",   color: "#ff4444" },
-    ];
-
-    const diffBgs: Phaser.GameObjects.Graphics[] = [];
-    const diffTxts: Phaser.GameObjects.Text[] = [];
-
-    const refreshDiff = () => {
-      const current = getSettings().difficulty;
-      diffOptions.forEach(({ key, color }, i) => {
-        const isSelected = key === current;
-        diffBgs[i].clear();
-        diffBgs[i].fillStyle(isSelected ? 0x001a00 : 0x000d00, 0.9);
-        diffBgs[i].fillRoundedRect(px + 140 + i * 108, py + 268, 100, 28, 6);
-        diffBgs[i].lineStyle(2, Phaser.Display.Color.HexStringToColor(color).color, isSelected ? 1 : 0.3);
-        diffBgs[i].strokeRoundedRect(px + 140 + i * 108, py + 268, 100, 28, 6);
-        diffTxts[i].setColor(isSelected ? color : "#334433").setAlpha(isSelected ? 1 : 0.6);
-      });
-    };
-
-    diffOptions.forEach(({ key, label, color }, i) => {
-      const bg = this.add.graphics().setDepth(52);
-      allObjs.push(bg);
-      diffBgs.push(bg);
-
-      const t = addText(px + 190 + i * 108, py + 282, label, {
-        fontSize: "13px", fontFamily: "monospace", color,
-      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-      diffTxts.push(t);
-
-      t.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
-        e.stopPropagation();
-        saveSettings({ difficulty: key });
-        refreshDiff();
-        soundManager.buttonClick();
-      });
-      t.on("pointerover", () => t.setScale(1.08));
-      t.on("pointerout",  () => t.setScale(1));
-    });
-    refreshDiff();
-
     // ── Divider lines ─────────────────────────────────────────────────
     const divG = this.add.graphics().setDepth(52);
     divG.lineStyle(1, 0xcc88ff, 0.18);
     divG.lineBetween(px + 20, py + 135, px + panelW - 20, py + 135);
     divG.lineBetween(px + 20, py + 198, px + panelW - 20, py + 198);
     divG.lineBetween(px + 20, py + 260, px + panelW - 20, py + 260);
-    divG.lineBetween(px + 20, py + 338, px + panelW - 20, py + 338);
     allObjs.push(divG);
 
     // ── CLOSE button ─────────────────────────────────────────────────

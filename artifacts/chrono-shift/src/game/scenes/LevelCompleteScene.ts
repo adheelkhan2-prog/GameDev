@@ -71,7 +71,7 @@ export class LevelCompleteScene extends Phaser.Scene {
     // Divider
     const line = this.add.graphics();
     line.lineStyle(2, 0x00ffcc, 0.4);
-    line.lineBetween(W / 2 - 280, H / 2 - 130, W / 2 + 280, H / 2 - 130);
+    line.lineBetween(W / 2 - 280, H / 2 - 150, W / 2 + 280, H / 2 - 150);
 
     const fmtMs = (ms: number) => {
       const secs = Math.floor(ms / 1000);
@@ -92,7 +92,7 @@ export class LevelCompleteScene extends Phaser.Scene {
     ];
 
     statLines.forEach((stat, i) => {
-      const y = H / 2 - 85 + i * 52;
+      const y = H / 2 - 120 + i * 48;
       this.add.text(W / 2 - 160, y, stat.label, {
         fontSize: "22px", fontFamily: "monospace", color: "#667788",
       }).setOrigin(0, 0.5);
@@ -107,7 +107,7 @@ export class LevelCompleteScene extends Phaser.Scene {
     saveScore(data?.score ?? 0, cumMs, level);
 
     // Buttons
-    const btnY = H / 2 + (newAbility ? 140 : 110);
+    const btnY = H / 2 + (newAbility ? 168 : 130);
 
     this.createButton(
       W / 2,
@@ -126,7 +126,7 @@ export class LevelCompleteScene extends Phaser.Scene {
       }
     );
 
-    this.createButton(W / 2, btnY + 66, "⌂  MAIN MENU", "#aaaaff", () => {
+    this.createButton(W / 2, btnY + 60, "⌂  MAIN MENU", "#aaaaff", () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(300, () => this.scene.start("MenuScene"));
     });
@@ -138,7 +138,7 @@ export class LevelCompleteScene extends Phaser.Scene {
 
     // Auto-countdown
     const countdownText = this.add
-      .text(W / 2, btnY + 136, "Auto-continuing in 10...", {
+      .text(W / 2, btnY + 118, "Auto-continuing in 10...", {
         fontSize: "14px", fontFamily: "monospace", color: "#334455",
       })
       .setOrigin(0.5);
@@ -188,7 +188,7 @@ export class LevelCompleteScene extends Phaser.Scene {
   }
 
   private showAbilityUnlock(W: number, H: number, abilityName: string) {
-    const bannerY = H / 2 + 48;
+    const bannerY = H / 2 + 76;
 
     const bannerBg = this.add.graphics();
     bannerBg.fillStyle(0x002200, 0.92);

@@ -199,7 +199,7 @@ export class Level4Scene extends GameScene {
   private showShootHint(): void {
     const W = this.scale.width;
     const banner = this.add
-      .text(W / 2, 76, "★  NEW ABILITY: Press [F] to SHOOT  ★", {
+      .text(W / 2, 48, "★  NEW ABILITY: Press [F] to SHOOT  ★", {
         fontSize: "17px",
         fontFamily: "monospace",
         color: "#00ffcc",
@@ -233,7 +233,7 @@ export class Level4Scene extends GameScene {
   private showWaveAlert(): void {
     const W = this.scale.width;
     const banner = this.add
-      .text(W / 2, 120, "⚠  REINFORCEMENTS INCOMING  ⚠", {
+      .text(W / 2, 148, "⚠  REINFORCEMENTS INCOMING  ⚠", {
         fontSize: "18px",
         fontFamily: "monospace",
         color: "#ff4400",

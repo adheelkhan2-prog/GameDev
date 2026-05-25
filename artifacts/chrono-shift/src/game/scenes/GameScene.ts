@@ -83,6 +83,7 @@ export abstract class GameScene extends Phaser.Scene {
 
   protected crystalsCollected = 0;
   protected totalCrystals = CRYSTALS_PER_LEVEL;
+  private crystalPositions: Array<{ x: number; y: number }> = [];
   protected levelComplete = false;
   protected gameOver = false;
   protected paused = false;
@@ -193,14 +194,10 @@ export abstract class GameScene extends Phaser.Scene {
       .setVisible(false) as Phaser.GameObjects.Container;
     this.buildPauseMenu();
 
-    const crystalDefs = this.buildCollectibles()
-      .filter((d) => (d.type ?? "crystal") === "crystal")
-      .map((d) => ({ x: d.x, y: d.y }));
-
     this.uiManager.initMiniMap({
       worldWidth: this.worldWidth,
       worldHeight: this.worldHeight,
-      crystals: crystalDefs,
+      crystals: this.crystalPositions,
       exitX: this.exitX,
       exitY: this.exitY,
       platforms: this.buildPlatforms().map((p) => ({
@@ -376,17 +373,36 @@ export abstract class GameScene extends Phaser.Scene {
 
   private createCollectibles() {
     this.crystals = this.physics.add.staticGroup();
+    this.crystalPositions = [];
     let crystalIdx = 0;
+
+    // Non-crystal collectibles (shards, health) placed at their defined positions
     for (const def of this.buildCollectibles()) {
       const type = def.type ?? "crystal";
+      if (type === "crystal") continue;
       const c = new Collectible(this, def.x, def.y, type);
-      if (type === "crystal") {
-        (c as Collectible & { crystalIndex: number }).crystalIndex = crystalIdx++;
-      }
       this.collectibles.push(c);
-      if (type === "crystal") {
-        this.crystals.add(c);
-      }
+    }
+
+    // Crystals placed at random positions on valid platforms each run
+    const allPlats = this.buildPlatforms();
+    const candidates = allPlats.filter(
+      (p) => p.type !== "collapse" && (p.w ?? 0) >= 80 && p.y < 620
+    );
+    const shuffled = Phaser.Utils.Array.Shuffle([...candidates]) as typeof candidates;
+    const chosen = shuffled.slice(0, this.totalCrystals);
+
+    for (const plat of chosen) {
+      const margin = 24;
+      const maxX = plat.x + (plat.w ?? 80) - margin;
+      const minX = plat.x + margin;
+      const cx = minX < maxX ? Phaser.Math.Between(minX, maxX) : plat.x + (plat.w ?? 80) / 2;
+      const cy = plat.y - (plat.h ?? 24) - 20;
+      this.crystalPositions.push({ x: cx, y: cy });
+      const c = new Collectible(this, cx, cy, "crystal");
+      (c as Collectible & { crystalIndex: number }).crystalIndex = crystalIdx++;
+      this.collectibles.push(c);
+      this.crystals.add(c);
     }
   }
 
