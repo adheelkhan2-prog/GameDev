@@ -17,8 +17,8 @@ export const PHASE_SHIFTER_TELEPORT_INTERVAL = 2500;
 export const PULSAR_FIRE_INTERVAL = 2000;
 export const PROJECTILE_SPEED = 280;
 
-export const COLLAPSE_DELAY = 3000;
-export const COLLAPSE_RESPAWN = 5000;
+export const COLLAPSE_DELAY = 800;
+export const COLLAPSE_RESPAWN = 3000;
 
 export const DASH_SPEED = 560;
 export const DASH_DURATION = 190;

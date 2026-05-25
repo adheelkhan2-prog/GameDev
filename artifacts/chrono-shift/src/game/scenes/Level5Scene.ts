@@ -23,25 +23,31 @@ export class Level5Scene extends GameScene {
       { x: 0,    y: 640, w: 4200, h: 80 },
       { x: 100,  y: 560, w: 220,  h: 22 },
       { x: 380,  y: 480, w: 180,  h: 22 },
-      { x: 600,  y: 400, w: 140,  h: 22 },
+      { x: 600,  y: 400, w: 140,  h: 22, type: "collapse" },
       { x: 780,  y: 320, w: 160,  h: 22 },
       { x: 980,  y: 400, w: 120,  h: 22, type: "collapse" },
-      { x: 1140, y: 480, w: 200,  h: 22 },
-      { x: 1380, y: 400, w: 160,  h: 22 },
+      { x: 1140, y: 480, w: 200,  h: 22, type: "collapse" },
+      { x: 1380, y: 400, w: 160,  h: 22, type: "collapse" },
       { x: 1580, y: 320, w: 200,  h: 22 },
       { x: 1820, y: 240, w: 160,  h: 22, type: "collapse" },
-      { x: 2020, y: 320, w: 180,  h: 22 },
+      { x: 2020, y: 320, w: 180,  h: 22, type: "collapse" },
       { x: 2240, y: 400, w: 160,  h: 22 },
-      { x: 2440, y: 480, w: 180,  h: 22 },
+      { x: 2440, y: 480, w: 180,  h: 22, type: "collapse" },
       { x: 2660, y: 380, w: 120,  h: 22 },
       { x: 2820, y: 300, w: 120,  h: 22, type: "collapse" },
       { x: 2980, y: 220, w: 140,  h: 22 },
-      { x: 3160, y: 300, w: 120,  h: 22 },
+      { x: 3160, y: 300, w: 120,  h: 22, type: "collapse" },
       { x: 3320, y: 380, w: 120,  h: 22, type: "collapse" },
-      { x: 3480, y: 300, w: 200,  h: 22 },
+      { x: 3480, y: 300, w: 200,  h: 22, type: "collapse" },
       { x: 3700, y: 380, w: 160,  h: 22 },
-      { x: 3880, y: 460, w: 200,  h: 22 },
+      { x: 3880, y: 460, w: 200,  h: 22, type: "collapse" },
       { x: 3980, y: 556, w: 220,  h: 22 },
+      // additional narrow stepping stones (harder gaps)
+      { x: 870,  y: 420, w: 80,   h: 22, type: "collapse" },
+      { x: 1720, y: 380, w: 80,   h: 22, type: "collapse" },
+      { x: 2570, y: 440, w: 80,   h: 22, type: "collapse" },
+      { x: 3060, y: 260, w: 80,   h: 22, type: "collapse" },
+      { x: 3400, y: 340, w: 80,   h: 22, type: "collapse" },
     ];
   }
 
@@ -81,30 +87,44 @@ export class Level5Scene extends GameScene {
 
   buildSpikes(): SpikeDef[] {
     return [
-      // Floor spikes (ground top = 640-40 = 600)
+      // Floor spikes
+      { x: 540,  y: 600, count: 3 },
       { x: 720,  y: 600, count: 3 },
+      { x: 1060, y: 600, count: 3 },
       { x: 1320, y: 600, count: 4 },
+      { x: 1780, y: 600, count: 3 },
       { x: 2340, y: 600, count: 4 },
+      { x: 2680, y: 600, count: 3 },
       { x: 3060, y: 600, count: 3 },
+      { x: 3420, y: 600, count: 3 },
       { x: 3700, y: 600, count: 4 },
       // Elevated platform spikes
-      // Platform { x:600, y:400, h:22 } → top = 400-11 = 389
-      { x: 660,  y: 389, count: 1 },
-      // Platform { x:1580, y:320, h:22 } → top = 320-11 = 309
-      { x: 1640, y: 309, count: 2 },
-      // Platform { x:2240, y:400, h:22 } → top = 400-11 = 389
+      // Platform { x:600, y:400, h:22 } → top = 389
+      { x: 660,  y: 389, count: 2 },
+      // Platform { x:780, y:320, h:22 } → top = 309
+      { x: 820,  y: 309, count: 2 },
+      // Platform { x:1580, y:320, h:22 } → top = 309
+      { x: 1640, y: 309, count: 3 },
+      // Platform { x:2240, y:400, h:22 } → top = 389
       { x: 2280, y: 389, count: 2 },
-      // Platform { x:3480, y:300, h:22 } → top = 300-11 = 289
-      { x: 3530, y: 289, count: 2 },
-      // Platform { x:3700, y:380, h:22 } → top = 380-11 = 369
-      { x: 3740, y: 369, count: 2 },
+      // Platform { x:2660, y:380, h:22 } → top = 369
+      { x: 2700, y: 369, count: 2 },
+      // Platform { x:2980, y:220, h:22 } → top = 209
+      { x: 3020, y: 209, count: 2 },
+      // Platform { x:3700, y:380, h:22 } → top = 369
+      { x: 3740, y: 369, count: 3 },
+      // Platform { x:3880, y:460, h:22 } → top = 449
+      { x: 3920, y: 449, count: 2 },
     ];
   }
 
   buildVortexes(): VortexDef[] {
     return [
+      { x: 800,  y: 580 },
       { x: 1700, y: 580 },
+      { x: 2500, y: 580 },
       { x: 3100, y: 580 },
+      { x: 3800, y: 580 },
     ];
   }
 }

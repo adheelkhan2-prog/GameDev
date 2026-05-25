@@ -64,23 +64,25 @@ export class Level4Scene extends GameScene {
       { x: 580,  y: 440, w: 120,  h: 22,  type: "collapse" },
       { x: 740,  y: 500, w: 160,  h: 22  },
       { x: 940,  y: 420, w: 100,  h: 22,  type: "collapse" },
-      { x: 1060, y: 360, w: 200,  h: 22  },
-      { x: 1300, y: 430, w: 140,  h: 22  },
-      { x: 1480, y: 360, w: 180,  h: 22  },
+      { x: 1060, y: 360, w: 200,  h: 22,  type: "collapse" },
+      { x: 1300, y: 430, w: 140,  h: 22,  type: "collapse" },
+      { x: 1480, y: 360, w: 180,  h: 22,  type: "collapse" },
       { x: 1700, y: 400, w: 120,  h: 22,  type: "collapse" },
       { x: 1860, y: 340, w: 200,  h: 22  },
-      { x: 2100, y: 410, w: 160,  h: 22  },
+      { x: 2100, y: 410, w: 160,  h: 22,  type: "collapse" },
       { x: 2300, y: 560, w: 60,   h: 200 },
       { x: 2420, y: 460, w: 60,   h: 100 },
       { x: 2540, y: 380, w: 60,   h: 180 },
       { x: 2420, y: 320, w: 120,  h: 22,  type: "collapse" },
-      { x: 2650, y: 440, w: 160,  h: 22  },
+      { x: 2650, y: 440, w: 160,  h: 22,  type: "collapse" },
       { x: 2850, y: 380, w: 140,  h: 22  },
-      { x: 3020, y: 320, w: 180,  h: 22  },
+      { x: 3020, y: 320, w: 180,  h: 22,  type: "collapse" },
       { x: 3220, y: 260, w: 140,  h: 22,  type: "collapse" },
-      { x: 3380, y: 320, w: 160,  h: 22  },
+      { x: 3380, y: 320, w: 160,  h: 22,  type: "collapse" },
       { x: 3560, y: 400, w: 180,  h: 22  },
       { x: 3600, y: 556, w: 200,  h: 22  },
+      // extra wall sections narrowing the path
+      { x: 2300, y: 420, w: 60,   h: 140 },
     ];
   }
 
@@ -132,26 +134,37 @@ export class Level4Scene extends GameScene {
 
   buildSpikes(): SpikeDef[] {
     return [
-      // Floor spikes (ground top = 640-40 = 600)
+      // Floor spikes
+      { x: 560,  y: 600, count: 2 },
       { x: 660,  y: 600, count: 3 },
+      { x: 900,  y: 600, count: 3 },
       { x: 1420, y: 600, count: 4 },
-      { x: 2200, y: 600, count: 3 },
+      { x: 1680, y: 600, count: 3 },
+      { x: 2200, y: 600, count: 4 },
+      { x: 2760, y: 600, count: 3 },
       { x: 3100, y: 600, count: 4 },
+      { x: 3480, y: 600, count: 3 },
       // Elevated platform spikes
-      // Platform { x:1060, y:360, h:22 } → top = 360-11 = 349
       { x: 1110, y: 349, count: 2 },
-      // Platform { x:1860, y:340, h:22 } → top = 340-11 = 329
-      { x: 1900, y: 329, count: 2 },
-      // Platform { x:3020, y:320, h:22 } → top = 320-11 = 309
+      { x: 1900, y: 329, count: 3 },
       { x: 3060, y: 309, count: 2 },
-      // Platform { x:2650, y:440, h:22 } → top = 440-11 = 429
-      { x: 2700, y: 429, count: 1 },
+      { x: 2700, y: 429, count: 2 },
+      // Platform { x:380, y:500, h:22 } → top = 489
+      { x: 420,  y: 489, count: 2 },
+      // Platform { x:740, y:500, h:22 } → top = 489
+      { x: 780,  y: 489, count: 1 },
+      // Platform { x:2850, y:380, h:22 } → top = 369
+      { x: 2890, y: 369, count: 2 },
+      // Platform { x:3560, y:400, h:22 } → top = 389
+      { x: 3600, y: 389, count: 2 },
     ];
   }
 
   buildVortexes(): VortexDef[] {
     return [
+      { x: 800,  y: 580 },
       { x: 1950, y: 580 },
+      { x: 2600, y: 580 },
       { x: 3300, y: 580 },
     ];
   }
