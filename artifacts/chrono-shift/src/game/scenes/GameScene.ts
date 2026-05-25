@@ -384,13 +384,33 @@ export abstract class GameScene extends Phaser.Scene {
       this.collectibles.push(c);
     }
 
-    // Crystals placed at random positions on valid platforms each run
+    // Crystals spread evenly across the level: divide into zones, pick one platform per zone
     const allPlats = this.buildPlatforms();
     const candidates = allPlats.filter(
       (p) => p.type !== "collapse" && (p.w ?? 0) >= 80 && p.y < 620
     );
-    const shuffled = Phaser.Utils.Array.Shuffle([...candidates]) as typeof candidates;
-    const chosen = shuffled.slice(0, this.totalCrystals);
+    const zoneWidth = this.worldWidth / this.totalCrystals;
+    const chosen: typeof candidates = [];
+
+    for (let z = 0; z < this.totalCrystals; z++) {
+      const zoneMin = z * zoneWidth;
+      const zoneMax = (z + 1) * zoneWidth;
+      const inZone = candidates.filter(
+        (p) => p.x + (p.w ?? 0) / 2 >= zoneMin && p.x + (p.w ?? 0) / 2 < zoneMax
+      );
+      const pool = inZone.length > 0 ? inZone : candidates;
+      const pick = pool[Phaser.Math.Between(0, pool.length - 1)];
+      if (pick && !chosen.includes(pick)) {
+        chosen.push(pick);
+      }
+    }
+
+    // Fallback: if zones didn't yield enough unique platforms, top up from remainder
+    if (chosen.length < this.totalCrystals) {
+      const remaining = (Phaser.Utils.Array.Shuffle([...candidates]) as typeof candidates)
+        .filter((p) => !chosen.includes(p));
+      chosen.push(...remaining.slice(0, this.totalCrystals - chosen.length));
+    }
 
     for (const plat of chosen) {
       const margin = 24;
