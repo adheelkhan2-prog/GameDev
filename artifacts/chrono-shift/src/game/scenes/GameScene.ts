@@ -208,7 +208,11 @@ export abstract class GameScene extends Phaser.Scene {
       })),
     });
 
-    this.ghostReplayManager = new GhostReplayManager(this, this.levelNumber);
+    const s = getSettings();
+    if (s.showGhostReplay) {
+      this.ghostReplayManager = new GhostReplayManager(this, this.levelNumber);
+    }
+    this.uiManager.setMinimapVisible(s.showMinimap);
 
     if (this.levelNumber === 1) {
       soundManager.startAmbientMusic();
@@ -494,7 +498,7 @@ export abstract class GameScene extends Phaser.Scene {
         bossEnemy.onPhaseChange = (phase) => {
           soundManager.bossPhaseChange();
           this.cameras.main.flash(300, 255, 100, 0);
-          this.cameras.main.shake(200, 0.01);
+          this.shake(200, 0.01);
         };
         this.boss = bossEnemy;
         enemy = bossEnemy;
@@ -519,7 +523,7 @@ export abstract class GameScene extends Phaser.Scene {
     this.bossDefeated = true;
     soundManager.bossDefeat();
     this.cameras.main.flash(600, 255, 180, 0);
-    this.cameras.main.shake(400, 0.018);
+    this.shake(400, 0.018);
     this.uiManager?.showBossDefeated();
 
     // Particle burst at boss position
@@ -585,7 +589,7 @@ export abstract class GameScene extends Phaser.Scene {
           } else {
             this.player.addScore(30);
           }
-          this.cameras.main.shake(70, 0.004);
+          this.shake(70, 0.004);
           // Hit spark particles
           try {
             const em = this.add.particles(enemy.x, enemy.y, "particle", {
@@ -669,6 +673,12 @@ export abstract class GameScene extends Phaser.Scene {
 
     // Enemies ↔ platforms
     this.physics.add.collider(this.enemies, this.platforms);
+  }
+
+  protected shake(duration: number, intensity: number) {
+    if (getSettings().cameraShake) {
+      this.cameras.main.shake(duration, intensity);
+    }
   }
 
   private handleCollapsePlatform(
@@ -957,7 +967,7 @@ export abstract class GameScene extends Phaser.Scene {
     this.ghostReplayManager?.destroy();
     this.ghostReplayManager = null;
 
-    this.cameras.main.shake(300, 0.015);
+    this.shake(300, 0.015);
     this.cameras.main.fade(800, 0, 0, 0);
 
     this.time.delayedCall(1000, () => {

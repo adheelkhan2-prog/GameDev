@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { getScores, clearScores, formatTime, type LeaderboardEntry } from "../utils/leaderboard";
-import { getSettings, saveSettings } from "../utils/settings";
+import { getSettings, saveSettings, resetAbilities } from "../utils/settings";
 import { soundManager } from "../managers/SoundManager";
 
 export class MenuScene extends Phaser.Scene {
@@ -228,7 +228,7 @@ export class MenuScene extends Phaser.Scene {
     const H = this.scale.height;
 
     const panelW = 540;
-    const panelH = 370;
+    const panelH = 496;
     const px = W / 2 - panelW / 2;
     const py = H / 2 - panelH / 2;
 
@@ -381,50 +381,111 @@ export class MenuScene extends Phaser.Scene {
     toggleLabel.on("pointerover", () => toggleLabel.setScale(1.06));
     toggleLabel.on("pointerout",  () => toggleLabel.setScale(1));
 
-    // ── FULLSCREEN ───────────────────────────────────────────────────
-    addText(px + 32, py + 218, "FULLSCREEN", {
+    // helper: generic ON/OFF toggle row
+    const makeToggle = (
+      label: string,
+      rowY: number,
+      getVal: () => boolean,
+      setVal: (v: boolean) => void,
+      onColor = "#00ff88",
+      offColor = "#ff4455"
+    ) => {
+      addText(px + 32, rowY, label, {
+        fontSize: "16px", fontFamily: "monospace", color: "#aaaacc",
+      });
+      const tbg = this.add.graphics().setDepth(52);
+      allObjs.push(tbg);
+      const tlbl = addText(px + 200, rowY + 8, "", {
+        fontSize: "15px", fontFamily: "monospace", color: onColor,
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const refresh = () => {
+        const on = getVal();
+        tbg.clear();
+        tbg.fillStyle(on ? 0x003311 : 0x220011, 0.9);
+        tbg.fillRoundedRect(px + 140, rowY - 4, 120, 28, 8);
+        tbg.lineStyle(2, on ? Phaser.Display.Color.HexStringToColor(onColor).color : Phaser.Display.Color.HexStringToColor(offColor).color, 0.8);
+        tbg.strokeRoundedRect(px + 140, rowY - 4, 120, 28, 8);
+        tlbl.setText(on ? "✓  ON" : "✕  OFF");
+        tlbl.setColor(on ? onColor : offColor);
+      };
+      refresh();
+      tlbl.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
+        e.stopPropagation();
+        setVal(!getVal());
+        refresh();
+        soundManager.buttonClick();
+      });
+      tlbl.on("pointerover", () => tlbl.setScale(1.06));
+      tlbl.on("pointerout",  () => tlbl.setScale(1));
+    };
+
+    // ── GHOST REPLAY ──────────────────────────────────────────────────
+    makeToggle(
+      "GHOST REPLAY",
+      py + 218,
+      () => getSettings().showGhostReplay,
+      (v) => saveSettings({ showGhostReplay: v }),
+      "#00ffcc", "#ff4455"
+    );
+
+    // ── CAMERA SHAKE ──────────────────────────────────────────────────
+    makeToggle(
+      "CAMERA SHAKE",
+      py + 281,
+      () => getSettings().cameraShake,
+      (v) => saveSettings({ cameraShake: v }),
+      "#ffaa44", "#ff4455"
+    );
+
+    // ── SHOW MINIMAP ──────────────────────────────────────────────────
+    makeToggle(
+      "SHOW MINIMAP",
+      py + 344,
+      () => getSettings().showMinimap,
+      (v) => saveSettings({ showMinimap: v }),
+      "#44aaff", "#ff4455"
+    );
+
+    // ── RESET PROGRESS ────────────────────────────────────────────────
+    addText(px + 32, py + 407, "RESET PROGRESS", {
       fontSize: "16px", fontFamily: "monospace", color: "#aaaacc",
     });
-
-    const fsBg = this.add.graphics().setDepth(52);
-    allObjs.push(fsBg);
-    const fsLabel = addText(px + 210, py + 226, "", {
-      fontSize: "15px", fontFamily: "monospace", color: "#44aaff",
+    const resetBg = this.add.graphics().setDepth(52);
+    allObjs.push(resetBg);
+    resetBg.fillStyle(0x1a0000, 0.9);
+    resetBg.fillRoundedRect(px + 140, py + 395, 160, 28, 8);
+    resetBg.lineStyle(2, 0xff4444, 0.5);
+    resetBg.strokeRoundedRect(px + 140, py + 395, 160, 28, 8);
+    const resetLbl = addText(px + 220, py + 409, "RESET  ⚠", {
+      fontSize: "13px", fontFamily: "monospace", color: "#ff4444",
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    const refreshFs = () => {
-      const full = this.scale.isFullscreen;
-      fsBg.clear();
-      fsBg.fillStyle(0x001122, 0.9);
-      fsBg.fillRoundedRect(px + 140, py + 213, 140, 28, 8);
-      fsBg.lineStyle(2, 0x44aaff, 0.7);
-      fsBg.strokeRoundedRect(px + 140, py + 213, 140, 28, 8);
-      fsLabel.setText(full ? "⤓  EXIT FULL" : "⤢  ENTER FULL");
-      fsLabel.setColor(full ? "#aaccff" : "#44aaff");
-    };
-    refreshFs();
-
-    fsLabel.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
+    let resetConfirm = false;
+    resetLbl.on("pointerover", () => resetLbl.setColor("#ff8888"));
+    resetLbl.on("pointerout",  () => { resetLbl.setColor("#ff4444"); resetConfirm = false; resetLbl.setText("RESET  ⚠"); });
+    resetLbl.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
       e.stopPropagation();
-      if (this.scale.isFullscreen) {
-        this.scale.stopFullscreen();
+      if (!resetConfirm) {
+        resetConfirm = true;
+        resetLbl.setText("CONFIRM?");
+        resetLbl.setColor("#ffcc00");
       } else {
-        this.scale.startFullscreen();
+        resetAbilities();
+        resetLbl.setText("RESET DONE ✓");
+        resetLbl.setColor("#00ff88");
+        resetConfirm = false;
+        soundManager.buttonClick();
       }
-      this.time.delayedCall(120, refreshFs);
     });
-    fsLabel.on("pointerover", () => fsLabel.setScale(1.06));
-    fsLabel.on("pointerout",  () => fsLabel.setScale(1));
-
-    this.scale.on("enterfullscreen",  refreshFs);
-    this.scale.on("leavefullscreen",  refreshFs);
 
     // ── Divider lines ─────────────────────────────────────────────────
     const divG = this.add.graphics().setDepth(52);
     divG.lineStyle(1, 0xcc88ff, 0.18);
     divG.lineBetween(px + 20, py + 135, px + panelW - 20, py + 135);
     divG.lineBetween(px + 20, py + 198, px + panelW - 20, py + 198);
-    divG.lineBetween(px + 20, py + 260, px + panelW - 20, py + 260);
+    divG.lineBetween(px + 20, py + 261, px + panelW - 20, py + 261);
+    divG.lineBetween(px + 20, py + 324, px + panelW - 20, py + 324);
+    divG.lineBetween(px + 20, py + 387, px + panelW - 20, py + 387);
+    divG.lineBetween(px + 20, py + 448, px + panelW - 20, py + 448);
     allObjs.push(divG);
 
     // ── CLOSE button ─────────────────────────────────────────────────

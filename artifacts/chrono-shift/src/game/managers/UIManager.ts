@@ -61,6 +61,7 @@ export class UIManager {
   private mapScaleY = 1;
   private exitPulseTween: Phaser.Tweens.Tween | null = null;
   private exitPulse = 1;
+  private minimapVisible = true;
 
   private startTime = 0;
   private pausedAt = 0;
@@ -296,13 +297,20 @@ export class UIManager {
     this.mapLabel.setColor("#667788");
   }
 
+  setMinimapVisible(visible: boolean) {
+    this.minimapVisible = visible;
+    this.mapBg.setVisible(visible);
+    this.mapGfx.setVisible(visible);
+    this.mapLabel.setVisible(visible);
+  }
+
   markCrystalCollected(index: number) {
     this.collectedCrystals.add(index);
   }
 
   private drawMiniMap(playerX: number, playerY: number) {
     const cfg = this.mapConfig;
-    if (!cfg) return;
+    if (!cfg || !this.minimapVisible) return;
     this.mapGfx.clear();
     const ex = this.mapX + cfg.exitX * this.mapScaleX;
     const ey = this.mapY + cfg.exitY * this.mapScaleY;

@@ -9,6 +9,9 @@ export interface GameSettings {
   volume: number;
   soundEnabled: boolean;
   difficulty: 'easy' | 'normal' | 'hard';
+  showGhostReplay: boolean;
+  cameraShake: boolean;
+  showMinimap: boolean;
   unlockedAbilities: UnlockedAbilities;
 }
 
@@ -25,6 +28,9 @@ const DEFAULTS: GameSettings = {
   volume: 0.38,
   soundEnabled: true,
   difficulty: 'normal',
+  showGhostReplay: true,
+  cameraShake: true,
+  showMinimap: true,
   unlockedAbilities: { ...DEFAULT_ABILITIES },
 };
 
