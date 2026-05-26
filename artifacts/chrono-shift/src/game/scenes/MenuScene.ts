@@ -428,35 +428,26 @@ export class MenuScene extends Phaser.Scene {
       "#00ffcc", "#ff4455"
     );
 
-    // ── CAMERA SHAKE ──────────────────────────────────────────────────
-    makeToggle(
-      "CAMERA SHAKE",
-      py + 281,
-      () => getSettings().cameraShake,
-      (v) => saveSettings({ cameraShake: v }),
-      "#ffaa44", "#ff4455"
-    );
-
     // ── SHOW MINIMAP ──────────────────────────────────────────────────
     makeToggle(
       "SHOW MINIMAP",
-      py + 344,
+      py + 281,
       () => getSettings().showMinimap,
       (v) => saveSettings({ showMinimap: v }),
       "#44aaff", "#ff4455"
     );
 
     // ── RESET PROGRESS ────────────────────────────────────────────────
-    addText(px + 32, py + 407, "RESET PROGRESS", {
+    addText(px + 32, py + 344, "RESET PROGRESS", {
       fontSize: "16px", fontFamily: "monospace", color: "#aaaacc",
     });
     const resetBg = this.add.graphics().setDepth(52);
     allObjs.push(resetBg);
     resetBg.fillStyle(0x1a0000, 0.9);
-    resetBg.fillRoundedRect(px + 140, py + 395, 160, 28, 8);
+    resetBg.fillRoundedRect(px + 140, py + 332, 160, 28, 8);
     resetBg.lineStyle(2, 0xff4444, 0.5);
-    resetBg.strokeRoundedRect(px + 140, py + 395, 160, 28, 8);
-    const resetLbl = addText(px + 220, py + 409, "RESET  ⚠", {
+    resetBg.strokeRoundedRect(px + 140, py + 332, 160, 28, 8);
+    const resetLbl = addText(px + 220, py + 346, "RESET  ⚠", {
       fontSize: "13px", fontFamily: "monospace", color: "#ff4444",
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     let resetConfirm = false;
@@ -485,7 +476,6 @@ export class MenuScene extends Phaser.Scene {
     divG.lineBetween(px + 20, py + 261, px + panelW - 20, py + 261);
     divG.lineBetween(px + 20, py + 324, px + panelW - 20, py + 324);
     divG.lineBetween(px + 20, py + 387, px + panelW - 20, py + 387);
-    divG.lineBetween(px + 20, py + 448, px + panelW - 20, py + 448);
     allObjs.push(divG);
 
     // ── CLOSE button ─────────────────────────────────────────────────
