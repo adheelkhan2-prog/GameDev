@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { getScores, clearScores, formatTime, type LeaderboardEntry } from "../utils/leaderboard";
-import { getSettings, saveSettings, resetAbilities } from "../utils/settings";
+import { getSettings, saveSettings, resetAbilities, getHighestLevelReached } from "../utils/settings";
 import { soundManager } from "../managers/SoundManager";
 
 export class MenuScene extends Phaser.Scene {
@@ -97,27 +97,31 @@ export class MenuScene extends Phaser.Scene {
     // Player preview art
     this.createPlayerPreview(W / 2, 290);
 
-    // Buttons
-    this.createButton(W / 2, 375, "▶  PLAY GAME", "#00ff88", () => {
+    // Buttons (6 buttons, 50px spacing)
+    this.createButton(W / 2, 370, "▶  PLAY GAME", "#00ff88", () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(300, () =>
         this.scene.start("Level1Scene", { difficulty: getSettings().difficulty })
       );
     });
 
-    this.createButton(W / 2, 432, "★  HIGH SCORES", "#ffd700", () => {
+    this.createButton(W / 2, 420, "⏩  LEVEL SELECT", "#00ffff", () => {
+      this.showLevelSelect();
+    });
+
+    this.createButton(W / 2, 470, "★  HIGH SCORES", "#ffd700", () => {
       this.showLeaderboard();
     });
 
-    this.createButton(W / 2, 489, "⚙  SETTINGS", "#cc88ff", () => {
+    this.createButton(W / 2, 520, "⚙  SETTINGS", "#cc88ff", () => {
       this.showSettings();
     });
 
-    this.createButton(W / 2, 546, "?  HOW TO PLAY", "#44aaff", () => {
+    this.createButton(W / 2, 570, "?  HOW TO PLAY", "#44aaff", () => {
       this.showInstructions();
     });
 
-    this.createButton(W / 2, 603, "✦  CREDITS", "#ffaa44", () => {
+    this.createButton(W / 2, 620, "✦  CREDITS", "#ffaa44", () => {
       this.showCredits();
     });
 
@@ -700,6 +704,174 @@ export class MenuScene extends Phaser.Scene {
     };
 
     overlay.on("pointerdown", close);
+  }
+
+  private showLevelSelect() {
+    const W = this.scale.width;
+    const H = this.scale.height;
+    const highest = getHighestLevelReached();
+    const difficulty = getSettings().difficulty;
+
+    const panelW = 720;
+    const panelH = 500;
+    const px = W / 2 - panelW / 2;
+    const py = H / 2 - panelH / 2;
+
+    const overlay = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.88)
+      .setDepth(50).setInteractive();
+    const panel = this.add.graphics().setDepth(51);
+    panel.fillStyle(0x000d1f, 0.98);
+    panel.fillRoundedRect(px, py, panelW, panelH, 16);
+    panel.lineStyle(2, 0x00ffff, 0.7);
+    panel.strokeRoundedRect(px, py, panelW, panelH, 16);
+
+    const allObjs: Phaser.GameObjects.GameObject[] = [overlay, panel];
+    const closeAll = () => allObjs.forEach(o => { if (o.active) o.destroy(); });
+
+    const addT = (x: number, y: number, txt: string, style: Phaser.Types.GameObjects.Text.TextStyle) => {
+      const t = this.add.text(x, y, txt, style).setDepth(52);
+      allObjs.push(t);
+      return t;
+    };
+
+    // Title
+    addT(W / 2, py + 36, "⏩  LEVEL SELECT", {
+      fontSize: "28px", fontFamily: "monospace", color: "#00ffff",
+      stroke: "#003344", strokeThickness: 3,
+      shadow: { offsetX: 0, offsetY: 0, color: "#00ffff", blur: 10, fill: true },
+    }).setOrigin(0.5);
+
+    // ✕ close
+    const xBtn = addT(px + panelW - 28, py + 25, "✕", {
+      fontSize: "20px", fontFamily: "monospace", color: "#446688",
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    xBtn.on("pointerover", () => xBtn.setColor("#00ffff"));
+    xBtn.on("pointerout",  () => xBtn.setColor("#446688"));
+    xBtn.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => { e.stopPropagation(); closeAll(); });
+
+    const divG = this.add.graphics().setDepth(52);
+    divG.lineStyle(1, 0x00ffff, 0.2);
+    divG.lineBetween(px + 20, py + 62, px + panelW - 20, py + 62);
+    allObjs.push(divG);
+
+    // Hint text
+    if (highest === 0) {
+      addT(W / 2, py + 82, "Complete levels to unlock more stages", {
+        fontSize: "13px", fontFamily: "monospace", color: "#446677",
+      }).setOrigin(0.5);
+    }
+
+    // Level data
+    const levels = [
+      { num: 1, name: "ERA I",            scene: "Level1Scene",  color: "#00ff88", reqLevel: 0 },
+      { num: 2, name: "ERA II",           scene: "Level2Scene",  color: "#00ffcc", reqLevel: 1 },
+      { num: 3, name: "ERA III",          scene: "Level3Scene",  color: "#44aaff", reqLevel: 2 },
+      { num: 4, name: "THE RUINS",        scene: "Level4Scene",  color: "#ffaa44", reqLevel: 3 },
+      { num: 5, name: "NEON FUTURE",      scene: "Level5Scene",  color: "#ff44ff", reqLevel: 4 },
+      { num: 6, name: "BOSS CHAMBER",     scene: "BossScene",    color: "#ff4444", reqLevel: 5 },
+    ];
+
+    const cols = 2;
+    const cardW = 300;
+    const cardH = 72;
+    const colGap = 20;
+    const rowGap = 14;
+    const gridW = cols * cardW + (cols - 1) * colGap;
+    const gridStartX = W / 2 - gridW / 2;
+    const gridStartY = py + 98;
+
+    levels.forEach((lvl, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const cx = gridStartX + col * (cardW + colGap);
+      const cy = gridStartY + row * (cardH + rowGap);
+      const unlocked = highest >= lvl.reqLevel;
+      const cardColor = unlocked
+        ? Phaser.Display.Color.HexStringToColor(lvl.color).color
+        : 0x223344;
+      const textColor = unlocked ? lvl.color : "#334455";
+      const numColor  = unlocked ? lvl.color : "#2a3d4d";
+
+      // Card background
+      const cardBg = this.add.graphics().setDepth(52);
+      const drawCard = (hover = false) => {
+        cardBg.clear();
+        cardBg.fillStyle(hover ? 0x001a2e : 0x000d1f, unlocked ? 0.95 : 0.6);
+        cardBg.fillRoundedRect(cx, cy, cardW, cardH, 10);
+        cardBg.lineStyle(2, cardColor, unlocked ? (hover ? 1 : 0.7) : 0.25);
+        cardBg.strokeRoundedRect(cx, cy, cardW, cardH, 10);
+      };
+      drawCard();
+      allObjs.push(cardBg);
+
+      // Level number badge
+      const badgeBg = this.add.graphics().setDepth(53);
+      badgeBg.fillStyle(unlocked ? cardColor : 0x223344, unlocked ? 0.2 : 0.15);
+      badgeBg.fillRoundedRect(cx + 10, cy + 12, 46, 46, 8);
+      allObjs.push(badgeBg);
+
+      const numLabel = lvl.num <= 5 ? `L${lvl.num}` : "BOSS";
+      addT(cx + 33, cy + 36, numLabel, {
+        fontSize: lvl.num <= 5 ? "18px" : "12px", fontFamily: "monospace", color: numColor,
+      }).setOrigin(0.5);
+
+      // Level name
+      addT(cx + 70, cy + 22, lvl.name, {
+        fontSize: "18px", fontFamily: "monospace", color: textColor,
+        stroke: "#000010", strokeThickness: 2,
+      });
+
+      // Status
+      if (unlocked) {
+        const played = highest >= lvl.num;
+        const statusTxt = played ? "✓ COMPLETED" : (lvl.num === 1 ? "▶ START HERE" : "▶ UNLOCKED");
+        const statusColor = played ? "#00cc66" : "#aaaacc";
+        addT(cx + 70, cy + 46, statusTxt, {
+          fontSize: "13px", fontFamily: "monospace", color: statusColor,
+        });
+      } else {
+        addT(cx + 70, cy + 46, "🔒 LOCKED", {
+          fontSize: "13px", fontFamily: "monospace", color: "#2a3d4d",
+        });
+      }
+
+      // Interaction
+      if (unlocked) {
+        const hit = this.add.rectangle(cx + cardW / 2, cy + cardH / 2, cardW, cardH, 0xffffff, 0)
+          .setDepth(54).setInteractive({ useHandCursor: true });
+        allObjs.push(hit);
+        hit.on("pointerover", () => { drawCard(true); soundManager.buttonClick(); });
+        hit.on("pointerout",  () => drawCard(false));
+        hit.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => {
+          e.stopPropagation();
+          closeAll();
+          this.cameras.main.fadeOut(300, 0, 0, 0);
+          this.time.delayedCall(310, () =>
+            this.scene.start(lvl.scene, { difficulty })
+          );
+        });
+      }
+    });
+
+    // Close button at bottom
+    const closeBtnY = py + panelH - 34;
+    const closeBg = this.add.graphics().setDepth(52);
+    closeBg.fillStyle(0x001122, 0.85);
+    closeBg.fillRoundedRect(W / 2 - 70, closeBtnY - 14, 140, 28, 8);
+    closeBg.lineStyle(1, 0x00ffff, 0.4);
+    closeBg.strokeRoundedRect(W / 2 - 70, closeBtnY - 14, 140, 28, 8);
+    allObjs.push(closeBg);
+    const closeBtn = addT(W / 2, closeBtnY, "[ CLOSE ]", {
+      fontSize: "14px", fontFamily: "monospace", color: "#00ffff",
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    closeBtn.on("pointerover", () => closeBtn.setColor("#ffffff"));
+    closeBtn.on("pointerout",  () => closeBtn.setColor("#00ffff"));
+    closeBtn.on("pointerdown", (_p: unknown, _lx: unknown, _ly: unknown, e: Event) => { e.stopPropagation(); closeAll(); });
+
+    overlay.on("pointerdown", (ptr: Phaser.Input.Pointer) => {
+      const inside = ptr.x >= px && ptr.x <= px + panelW && ptr.y >= py && ptr.y <= py + panelH;
+      if (!inside) closeAll();
+    });
   }
 
   private showCredits() {

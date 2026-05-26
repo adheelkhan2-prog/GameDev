@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { saveScore } from "../utils/leaderboard";
-import { unlockAbility, getSettings, saveSettings } from "../utils/settings";
+import { unlockAbility, getSettings, saveSettings, saveHighestLevelReached } from "../utils/settings";
 import { soundManager } from "../managers/SoundManager";
 
 interface LevelCompleteData {
@@ -104,6 +104,7 @@ export class LevelCompleteScene extends Phaser.Scene {
     // Ability unlock logic
     const newAbility = this.checkAbilityUnlock(level);
 
+    saveHighestLevelReached(level);
     saveScore(data?.score ?? 0, cumMs, level);
 
     // Buttons

@@ -85,3 +85,15 @@ export function hasCutscenePlayed(): boolean {
 export function markCutscenePlayed(): void {
   try { localStorage.setItem("chrono_cutscene_seen", "1"); } catch {}
 }
+
+export function getHighestLevelReached(): number {
+  try { return parseInt(localStorage.getItem("chrono_highest_level") ?? "0", 10) || 0; }
+  catch { return 0; }
+}
+
+export function saveHighestLevelReached(level: number): void {
+  try {
+    const current = getHighestLevelReached();
+    if (level > current) localStorage.setItem("chrono_highest_level", String(level));
+  } catch {}
+}
