@@ -49,6 +49,13 @@ export class UIManager {
   private abilityIcons: Phaser.GameObjects.Text | null = null;
 
   private damageFlash!: Phaser.GameObjects.Rectangle;
+  private vignetteGfx!: Phaser.GameObjects.Graphics;
+  private lowHealthActive = false;
+  private lowHealthPulseTween: Phaser.Tweens.Tween | null = null;
+
+  private slowRingGfx!: Phaser.GameObjects.Graphics;
+  private dashRingGfx: Phaser.GameObjects.Graphics | null = null;
+  private shootRingGfx: Phaser.GameObjects.Graphics | null = null;
 
   private mapBg!: Phaser.GameObjects.Graphics;
   private mapGfx!: Phaser.GameObjects.Graphics;
@@ -242,9 +249,34 @@ export class UIManager {
       }
     }
 
+    // ── Ring indicators (one per ability) ──
+    this.slowRingGfx = this.scene.add.graphics();
+    this.slowRingGfx.setDepth(92).setScrollFactor(0);
+    if (this.abilities.dash) {
+      this.dashRingGfx = this.scene.add.graphics();
+      this.dashRingGfx.setDepth(92).setScrollFactor(0);
+    }
+    if (this.abilities.shoot) {
+      this.shootRingGfx = this.scene.add.graphics();
+      this.shootRingGfx.setDepth(92).setScrollFactor(0);
+    }
+
     // ── Damage flash overlay ──
     this.damageFlash = this.scene.add.rectangle(W / 2, H / 2, W, H, 0xff0000, 0);
     this.damageFlash.setDepth(95).setScrollFactor(0);
+
+    // ── Low-health vignette border ──
+    this.vignetteGfx = this.scene.add.graphics();
+    this.vignetteGfx.setDepth(94).setScrollFactor(0).setVisible(false);
+    for (let i = 0; i < 5; i++) {
+      const thick = 70 - i * 12;
+      const alpha = 0.22 - i * 0.04;
+      this.vignetteGfx.fillStyle(0xff0000, alpha);
+      this.vignetteGfx.fillRect(0, 0, W, thick);
+      this.vignetteGfx.fillRect(0, H - thick, W, thick);
+      this.vignetteGfx.fillRect(0, thick, thick, H - thick * 2);
+      this.vignetteGfx.fillRect(W - thick, thick, thick, H - thick * 2);
+    }
 
     // ── Mini-map (bottom-right) ──
     this.mapX = W - MAP_W - MAP_PAD;
@@ -375,6 +407,7 @@ export class UIManager {
     this.crystalText.setText(`CRYSTALS: ${crystals}/${totalCrystals}`);
     this.timerText.setText(`TIME: ${timeStr}`);
     this.updateHearts(health);
+    this.updateLowHealth(health);
     this.updateAbilityBars(dashCooldownRemaining, dashActive, shootCooldownRemaining);
     this.drawMiniMap(playerX, playerY);
   }
@@ -411,6 +444,7 @@ export class UIManager {
       this.timeManager.slowReady && !this.timeManager.slowActive ? "#44ff88" :
       this.timeManager.slowActive ? "#8899ff" : "#ff8844"
     );
+    this.drawRing(this.slowRingGfx, 221, rowY0 + 10, slowFill, slowColor);
 
     const rowY1 = rowY0 + 34;
 
@@ -436,6 +470,7 @@ export class UIManager {
       this.dashStatus.setPosition(14, rowY2 + 16);
       this.dashStatus.setText(dashStatusText);
       this.dashStatus.setColor(dashFill >= 1 && !dashActive ? "#44ff88" : dashActive ? "#ffcc44" : "#ff8844");
+      this.drawRing(this.dashRingGfx!, 221, rowY2 + 10, dashFill, dashColor);
     }
 
     // Shoot bar (if unlocked)
@@ -458,6 +493,58 @@ export class UIManager {
       this.shootStatus.setPosition(14, shootRowY + 16);
       this.shootStatus.setText(shootStatusText);
       this.shootStatus.setColor(shootCooldownRemaining <= 0 ? "#44ff88" : "#ff8844");
+      this.drawRing(this.shootRingGfx!, 221, shootRowY + 10, shootFill, shootColor);
+    }
+  }
+
+  private drawRing(gfx: Phaser.GameObjects.Graphics, x: number, y: number, fill: number, color: number) {
+    const R = 8;
+    gfx.clear();
+    gfx.lineStyle(2.5, 0x112233, 1);
+    gfx.strokeCircle(x, y, R);
+    if (fill > 0.01) {
+      gfx.lineStyle(2.5, color, 1);
+      const start = Phaser.Math.DegToRad(-90);
+      const end = start + Phaser.Math.DegToRad(Math.min(fill, 1) * 360);
+      gfx.beginPath();
+      gfx.arc(x, y, R, start, end, false);
+      gfx.strokePath();
+    }
+    if (fill >= 1) {
+      gfx.fillStyle(color, 0.18);
+      gfx.fillCircle(x, y, R);
+    }
+  }
+
+  private updateLowHealth(health: number) {
+    const isLow = health === 1;
+    if (isLow && !this.lowHealthActive) {
+      this.lowHealthActive = true;
+      this.vignetteGfx.setVisible(true).setAlpha(0);
+      this.lowHealthPulseTween = this.scene.tweens.add({
+        targets: this.vignetteGfx,
+        alpha: { from: 0.3, to: 1 },
+        duration: 700,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+      this.scene.tweens.add({
+        targets: this.healthContainer,
+        scaleX: { from: 1, to: 1.12 },
+        scaleY: { from: 1, to: 1.12 },
+        duration: 500,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    } else if (!isLow && this.lowHealthActive) {
+      this.lowHealthActive = false;
+      this.lowHealthPulseTween?.stop();
+      this.lowHealthPulseTween = null;
+      this.vignetteGfx.setVisible(false);
+      this.healthContainer.setScale(1);
+      this.scene.tweens.killTweensOf(this.healthContainer);
     }
   }
 

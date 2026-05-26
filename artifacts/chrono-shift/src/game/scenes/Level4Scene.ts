@@ -1,4 +1,4 @@
-import { GameScene, PlatformDef, EnemyDef, CollectibleDef, SpikeDef, VortexDef } from "./GameScene";
+import { GameScene, PlatformDef, EnemyDef, CollectibleDef, SpikeDef, VortexDef, CrateDef } from "./GameScene";
 import { COLORS } from "../constants";
 
 const WAVE_CHECKPOINTS = [1200, 2000, 2800, 3400];
@@ -48,6 +48,7 @@ export class Level4Scene extends GameScene {
   protected exitX = 3660;
   protected exitY = 556;
   protected nextScene = "Level5Scene";
+  protected levelTimeTarget = 120;
   protected totalCrystals = 5;
   protected defaultTileKey = "platform_ruins";
   protected bgColor = COLORS.RUINS_GROUND;
@@ -157,6 +158,15 @@ export class Level4Scene extends GameScene {
       { x: 2890, y: 369, count: 2 },
       // Platform { x:3560, y:400, h:22 } → top = 389
       { x: 3600, y: 389, count: 2 },
+    ];
+  }
+
+  buildCrates(): CrateDef[] {
+    return [
+      { x: 800,  y: 428 },
+      { x: 1800, y: 388 },
+      { x: 2700, y: 428 },
+      { x: 3400, y: 448 },
     ];
   }
 

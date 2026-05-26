@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { GameScene, PlatformDef, EnemyDef, CollectibleDef, SpikeDef, VortexDef } from "./GameScene";
 import { soundManager } from "../managers/SoundManager";
 import { saveScore } from "../utils/leaderboard";
-import { COLORS } from "../constants";
+import { COLORS, BOSS_MAX_HP } from "../constants";
 
 export class BossScene extends GameScene {
   protected levelNumber = 6;
@@ -19,6 +19,10 @@ export class BossScene extends GameScene {
   protected defaultTileKey = "platform";
 
   private arenaGfx: Phaser.GameObjects.Graphics | null = null;
+  private bossHudBg: Phaser.GameObjects.Rectangle | null = null;
+  private bossHudFill: Phaser.GameObjects.Graphics | null = null;
+  private bossHudText: Phaser.GameObjects.Text | null = null;
+  private bossHudPhase: Phaser.GameObjects.Text | null = null;
 
   constructor() {
     super("BossScene");
@@ -29,6 +33,59 @@ export class BossScene extends GameScene {
     this.drawArenaDeco();
     soundManager.stopAmbientMusic();
     this.showBossIntro();
+    this.buildBossHud();
+  }
+
+  update(time: number, delta: number) {
+    super.update(time, delta);
+    this.refreshBossHud();
+  }
+
+  private buildBossHud() {
+    const W = this.scale.width;
+
+    // Background bar
+    this.bossHudBg = this.add.rectangle(W / 2, 54, 420, 22, 0x220000, 0.9)
+      .setScrollFactor(0).setDepth(200).setOrigin(0.5);
+    this.add.rectangle(W / 2, 54, 424, 26, 0xff2200, 0.5)
+      .setScrollFactor(0).setDepth(199).setOrigin(0.5);
+
+    // Fill bar
+    this.bossHudFill = this.add.graphics().setScrollFactor(0).setDepth(201);
+
+    // Name label
+    this.bossHudText = this.add.text(W / 2, 36, "TEMPORAL GUARDIAN", {
+      fontSize: "13px", fontFamily: "monospace",
+      color: "#ff6644", stroke: "#000", strokeThickness: 3,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+
+    // Phase label
+    this.bossHudPhase = this.add.text(W / 2 + 220, 54, "PHASE I", {
+      fontSize: "11px", fontFamily: "monospace", color: "#ffaa88",
+    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(202);
+  }
+
+  private refreshBossHud() {
+    if (!this.bossHudFill || !this.boss) return;
+    const W = this.scale.width;
+    const hp = Math.max(0, this.boss.hp);
+    const pct = hp / BOSS_MAX_HP;
+    const barW = 420;
+    const fillW = Math.round(barW * pct);
+    const fillColor = pct > 0.6 ? 0xff4400 : pct > 0.3 ? 0xff8800 : 0xff0044;
+
+    this.bossHudFill.clear();
+    if (fillW > 0) {
+      this.bossHudFill.fillStyle(fillColor, 1);
+      this.bossHudFill.fillRect(W / 2 - barW / 2, 43, fillW, 22);
+    }
+
+    // HP number
+    this.bossHudText?.setText(`TEMPORAL GUARDIAN  ${hp} / ${BOSS_MAX_HP}`);
+
+    // Phase
+    const phase = pct > 0.6 ? "PHASE I" : pct > 0.3 ? "PHASE II" : "PHASE III ⚡";
+    this.bossHudPhase?.setText(phase);
   }
 
   private drawArenaDeco() {

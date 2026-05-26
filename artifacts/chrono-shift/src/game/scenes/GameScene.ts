@@ -60,6 +60,11 @@ export interface VortexDef {
   y: number;
 }
 
+export interface CrateDef {
+  x: number;
+  y: number;
+}
+
 interface CollapseData {
   originalX: number;
   originalY: number;
@@ -106,6 +111,10 @@ export abstract class GameScene extends Phaser.Scene {
   private pauseObjects: Phaser.GameObjects.GameObject[] = [];
   private pauseInfoText!: Phaser.GameObjects.Text;
 
+  protected levelTimeTarget = 0;
+  private crateGroup: Phaser.Physics.Arcade.StaticGroup | null = null;
+  private crateGfxList: Phaser.GameObjects.Graphics[] = [];
+
   protected abstract levelNumber: number;
   protected abstract worldWidth: number;
   protected abstract worldHeight: number;
@@ -120,6 +129,7 @@ export abstract class GameScene extends Phaser.Scene {
   protected abstract buildCollectibles(): CollectibleDef[];
   protected abstract buildSpikes(): SpikeDef[];
   protected abstract buildVortexes?(): VortexDef[];
+  protected buildCrates(): CrateDef[] { return []; }
 
   init(data: { score?: number; cumulativeTimeMs?: number; difficulty?: string }) {
     this.cumulativeTimeMs = data?.cumulativeTimeMs ?? 0;
@@ -509,9 +519,19 @@ export abstract class GameScene extends Phaser.Scene {
         );
       }
 
+      if (def.type === "drone" || def.type === "chaser") {
+        this.drawPatrolIndicator(
+          def.patrolMin ?? def.x - (def.type === "drone" ? 150 : 200),
+          def.patrolMax ?? def.x + (def.type === "drone" ? 150 : 200),
+          def.y + 38
+        );
+      }
+
       this.enemies.add(enemy, true);
       this.enemyList.push(enemy);
     }
+
+    this.createCrates(this.buildCrates());
   }
 
   private onBossDefeated() {
@@ -668,6 +688,92 @@ export abstract class GameScene extends Phaser.Scene {
 
     // Enemies ↔ platforms
     this.physics.add.collider(this.enemies, this.platforms);
+  }
+
+  private createCrates(defs: CrateDef[]) {
+    if (defs.length === 0) return;
+    this.crateGroup = this.physics.add.staticGroup();
+    for (let i = 0; i < defs.length; i++) {
+      const { x, y } = defs[i];
+      const gfx = this.add.graphics().setDepth(15);
+      gfx.fillStyle(0x8b5a2b, 1);
+      gfx.fillRect(x - 20, y - 20, 40, 40);
+      gfx.lineStyle(2, 0xffcc88, 0.85);
+      gfx.strokeRect(x - 20, y - 20, 40, 40);
+      gfx.lineStyle(1, 0xffcc88, 0.35);
+      gfx.lineBetween(x, y - 20, x, y + 20);
+      gfx.lineBetween(x - 20, y, x + 20, y);
+      this.crateGfxList.push(gfx);
+      const body = this.physics.add.staticImage(x, y, "platform");
+      body.setAlpha(0).setSize(40, 40);
+      body.setData("gfxRef", gfx);
+      this.crateGroup.add(body, true);
+    }
+    this.physics.add.overlap(this.player, this.crateGroup, (_p, crate) => {
+      const playerBody = this.player.body as Phaser.Physics.Arcade.Body;
+      if (playerBody.velocity.y > 80) {
+        this.breakCrate(crate as Phaser.Physics.Arcade.Image);
+        this.player.setVelocityY(-260);
+      }
+    });
+    this.physics.add.overlap(this.playerProjectiles, this.crateGroup, (proj, crate) => {
+      (proj as Phaser.Physics.Arcade.Sprite).destroy();
+      this.breakCrate(crate as Phaser.Physics.Arcade.Image);
+    });
+  }
+
+  private breakCrate(body: Phaser.Physics.Arcade.Image) {
+    if (!body.active) return;
+    const gfx = body.getData("gfxRef") as Phaser.GameObjects.Graphics;
+    const cx = body.x, cy = body.y;
+    body.setActive(false).setVisible(false);
+    this.crateGroup?.remove(body, true, true);
+    gfx?.destroy();
+    soundManager.crystalCollect();
+    try {
+      const em = this.add.particles(cx, cy, "particle", {
+        speed: { min: 40, max: 180 }, angle: { min: 0, max: 360 },
+        scale: { start: 0.9, end: 0 }, alpha: { start: 1, end: 0 },
+        lifespan: 450, quantity: 14,
+        tint: [0x8b5a2b, 0xffcc88, 0xffd700],
+      });
+      this.time.delayedCall(520, () => em.destroy());
+    } catch {}
+    const roll = Math.random();
+    if (roll < 0.35 && this.player.health < this.player.maxHealth) {
+      this.player.health = Math.min(this.player.maxHealth, this.player.health + 1);
+      this.showFloatingText(cx, cy - 30, "+1 HP", "#ff4466");
+    } else {
+      const bonus = Math.round(40 * DIFFICULTY[this.difficultyKey].scoreBonus);
+      this.player.addScore(bonus);
+      this.showFloatingText(cx, cy - 30, `+${bonus}`, "#ffee44");
+    }
+  }
+
+  private drawPatrolIndicator(minX: number, maxX: number, y: number) {
+    const gfx = this.add.graphics().setDepth(8).setAlpha(0.4);
+    gfx.lineStyle(2, 0xff5500, 1);
+    const seg = 14, gap = 7;
+    let px = minX;
+    while (px < maxX) {
+      gfx.lineBetween(px, y, Math.min(px + seg, maxX), y);
+      px += seg + gap;
+    }
+    gfx.fillStyle(0xff5500, 1);
+    gfx.fillTriangle(minX, y, minX + 10, y - 5, minX + 10, y + 5);
+    gfx.fillTriangle(maxX, y, maxX - 10, y - 5, maxX - 10, y + 5);
+  }
+
+  private showFloatingText(x: number, y: number, text: string, color: string) {
+    const t = this.add.text(x, y, text, {
+      fontSize: "16px", fontFamily: "monospace", color,
+      stroke: "#000000", strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(50);
+    this.tweens.add({
+      targets: t, y: y - 55, alpha: { from: 1, to: 0 },
+      duration: 1100, ease: "Power2",
+      onComplete: () => t.destroy(),
+    });
   }
 
   protected shake(duration: number, intensity: number) {
@@ -962,6 +1068,11 @@ export abstract class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(600, () => {
       const elapsed = this.uiManager.getElapsedTime();
+      const targetMs = this.levelTimeTarget > 0 ? this.levelTimeTarget * 1000 : 0;
+      const timeBonusScore = (targetMs > 0 && elapsed <= targetMs)
+        ? Math.round(300 * DIFFICULTY[this.difficultyKey].scoreBonus)
+        : 0;
+      if (timeBonusScore > 0) this.player.addScore(timeBonusScore);
       this.scene.start("LevelCompleteScene", {
         level: this.levelNumber,
         score: this.player.score,
@@ -970,6 +1081,8 @@ export abstract class GameScene extends Phaser.Scene {
         nextScene: this.nextScene,
         crystals: this.crystalsCollected,
         difficulty: this.difficultyKey,
+        timeTarget: targetMs,
+        timeBonusScore,
       });
     });
   }
@@ -989,6 +1102,8 @@ export abstract class GameScene extends Phaser.Scene {
       this.scene.start("GameOverScene", {
         level: this.levelNumber,
         score: this.player.score,
+        crystals: this.crystalsCollected,
+        timeMs: this.uiManager?.getElapsedTime() ?? 0,
         retryScene: this.scene.key,
       });
     });

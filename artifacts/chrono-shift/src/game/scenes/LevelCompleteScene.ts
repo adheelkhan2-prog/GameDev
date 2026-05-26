@@ -11,6 +11,8 @@ interface LevelCompleteData {
   nextScene: string;
   crystals: number;
   difficulty?: string;
+  timeTarget?: number;
+  timeBonusScore?: number;
 }
 
 export class LevelCompleteScene extends Phaser.Scene {
@@ -84,10 +86,14 @@ export class LevelCompleteScene extends Phaser.Scene {
     const isFirstLevel = level === 1;
     const isLastLevel = level === 5;
 
+    const hasTimeBonus = (data?.timeBonusScore ?? 0) > 0;
+    const timeColor = hasTimeBonus ? "#ffe066" : "#aaccff";
     const statLines = [
       { label: "Score",      value: `${data?.score ?? 0}`,          color: "#ffee44" },
       { label: "Crystals",   value: `${data?.crystals ?? 0} / 5`,    color: "#ffd700" },
-      { label: "Level Time", value: fmtMs(data?.timeMs ?? 0),        color: "#aaccff" },
+      { label: "Level Time", value: fmtMs(data?.timeMs ?? 0),        color: timeColor },
+      ...((data?.timeTarget ?? 0) > 0 ? [{ label: "Time Target", value: fmtMs(data!.timeTarget!), color: "#556677" }] : []),
+      ...(hasTimeBonus ? [{ label: "⚡ TIME BONUS", value: `+${data!.timeBonusScore}`, color: "#ffee44" }] : []),
       ...(!isFirstLevel ? [{ label: "Total Time", value: fmtMs(cumMs), color: "#00ffcc" }] : []),
     ];
 

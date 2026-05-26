@@ -1,4 +1,4 @@
-import { GameScene, PlatformDef, EnemyDef, CollectibleDef, SpikeDef, VortexDef } from "./GameScene";
+import { GameScene, PlatformDef, EnemyDef, CollectibleDef, SpikeDef, VortexDef, CrateDef } from "./GameScene";
 import { COLORS } from "../constants";
 
 export class Level5Scene extends GameScene {
@@ -10,6 +10,7 @@ export class Level5Scene extends GameScene {
   protected exitX = 4060;
   protected exitY = 556;
   protected nextScene = "BossScene";
+  protected levelTimeTarget = 130;
   protected totalCrystals = 5;
   protected defaultTileKey = "platform_future";
   protected bgColor = COLORS.FUTURE_GROUND;
@@ -115,6 +116,15 @@ export class Level5Scene extends GameScene {
       { x: 3740, y: 369, count: 3 },
       // Platform { x:3880, y:460, h:22 } → top = 449
       { x: 3920, y: 449, count: 2 },
+    ];
+  }
+
+  buildCrates(): CrateDef[] {
+    return [
+      { x: 900,  y: 428 },
+      { x: 2000, y: 388 },
+      { x: 3200, y: 428 },
+      { x: 3900, y: 448 },
     ];
   }
 

@@ -3,6 +3,8 @@ import Phaser from "phaser";
 interface GameOverData {
   level: number;
   score: number;
+  crystals?: number;
+  timeMs?: number;
   retryScene?: string;
 }
 
@@ -64,25 +66,29 @@ export class GameOverScene extends Phaser.Scene {
     line.lineStyle(2, 0xff3333, 0.4);
     line.lineBetween(W / 2 - 250, H / 2 - 60, W / 2 + 250, H / 2 - 60);
 
-    // Stats
-    this.add
-      .text(W / 2, H / 2 - 20, `Level Reached: ${data?.level ?? 1}`, {
-        fontSize: "24px",
-        fontFamily: "monospace",
-        color: "#ffaaaa",
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(W / 2, H / 2 + 20, `Final Score: ${data?.score ?? 0}`, {
-        fontSize: "24px",
-        fontFamily: "monospace",
-        color: "#ffcc88",
-      })
-      .setOrigin(0.5);
+    // Stats panel
+    const fmtMs = (ms: number) => {
+      const s = Math.floor(ms / 1000);
+      return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
+    };
+    const stats = [
+      { label: "Level Reached", value: `${data?.level ?? 1}`,                  color: "#ffaaaa" },
+      { label: "Final Score",   value: `${data?.score ?? 0}`,                   color: "#ffcc88" },
+      { label: "Crystals",      value: `${data?.crystals ?? 0} / 5`,            color: "#ffd700" },
+      { label: "Time Survived", value: fmtMs(data?.timeMs ?? 0),                color: "#aaccff" },
+    ];
+    stats.forEach((s, i) => {
+      const sy = H / 2 - 30 + i * 44;
+      this.add.text(W / 2 - 160, sy, s.label, {
+        fontSize: "20px", fontFamily: "monospace", color: "#775566",
+      }).setOrigin(0, 0.5);
+      this.add.text(W / 2 + 160, sy, s.value, {
+        fontSize: "20px", fontFamily: "monospace", color: s.color,
+      }).setOrigin(1, 0.5);
+    });
 
     // Buttons
-    this.createButton(W / 2, H / 2 + 110, "↺  TRY AGAIN", "#ff6655", () => {
+    this.createButton(W / 2, H / 2 + 150, "↺  TRY AGAIN", "#ff6655", () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(300, () => {
         const retryScene = data?.retryScene ?? `Level${data?.level ?? 1}Scene`;
@@ -90,7 +96,7 @@ export class GameOverScene extends Phaser.Scene {
       });
     });
 
-    this.createButton(W / 2, H / 2 + 180, "⌂  MAIN MENU", "#aaaaff", () => {
+    this.createButton(W / 2, H / 2 + 220, "⌂  MAIN MENU", "#aaaaff", () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.time.delayedCall(300, () => this.scene.start("MenuScene"));
     });

@@ -1,4 +1,4 @@
-import { GameScene, PlatformDef, EnemyDef, CollectibleDef, SpikeDef } from "./GameScene";
+import { GameScene, PlatformDef, EnemyDef, CollectibleDef, SpikeDef, CrateDef } from "./GameScene";
 
 export class Level1Scene extends GameScene {
   protected levelNumber = 1;
@@ -9,6 +9,7 @@ export class Level1Scene extends GameScene {
   protected exitX = 2420;
   protected exitY = 560;
   protected nextScene = "Level2Scene";
+  protected levelTimeTarget = 90;
 
   constructor() {
     super("Level1Scene");
@@ -97,5 +98,13 @@ export class Level1Scene extends GameScene {
 
   buildVortexes() {
     return [];
+  }
+
+  buildCrates(): CrateDef[] {
+    return [
+      { x: 560,  y: 428 },
+      { x: 1136, y: 388 },
+      { x: 2316, y: 528 },
+    ];
   }
 }
