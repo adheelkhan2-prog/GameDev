@@ -103,7 +103,7 @@ export abstract class GameScene extends Phaser.Scene {
   protected dropOrbs: Array<{ gfx: Phaser.GameObjects.Graphics; type: "health" | "slow_boost" }> = [];
   protected proximityHints: Array<{ x: number; text: string; triggered: boolean }> = [];
 
-  private pauseContainer!: Phaser.GameObjects.Container;
+  private pauseObjects: Phaser.GameObjects.GameObject[] = [];
   private pauseInfoText!: Phaser.GameObjects.Text;
 
   protected abstract levelNumber: number;
@@ -187,11 +187,6 @@ export abstract class GameScene extends Phaser.Scene {
 
     this.input.keyboard!.on("keydown-ESC", () => this.togglePause());
 
-    this.pauseContainer = this.add
-      .container(0, 0)
-      .setDepth(200)
-      .setScrollFactor(0)
-      .setVisible(false) as Phaser.GameObjects.Container;
     this.buildPauseMenu();
 
     this.uiManager.initMiniMap({
@@ -723,19 +718,23 @@ export abstract class GameScene extends Phaser.Scene {
     const cx = W / 2;
     const cy = H / 2;
 
-    const overlay = this.add
-      .rectangle(cx, cy, W, H, 0x000000, 0.72)
-      .setInteractive();
-    this.pauseContainer.add(overlay);
+    const track = <T extends Phaser.GameObjects.GameObject>(obj: T): T => {
+      (obj as unknown as { setScrollFactor: (n: number) => void }).setScrollFactor(0);
+      (obj as unknown as { setDepth: (n: number) => void }).setDepth(200);
+      (obj as unknown as { setVisible: (v: boolean) => void }).setVisible(false);
+      this.pauseObjects.push(obj);
+      return obj;
+    };
 
-    const panel = this.add.graphics();
+    track(this.add.rectangle(cx, cy, W, H, 0x000000, 0.72).setInteractive());
+
+    const panel = track(this.add.graphics());
     panel.fillStyle(0x001a33, 0.97);
     panel.fillRoundedRect(cx - 200, cy - 200, 400, 400, 16);
     panel.lineStyle(2, 0x00ffcc, 0.6);
     panel.strokeRoundedRect(cx - 200, cy - 200, 400, 400, 16);
-    this.pauseContainer.add(panel);
 
-    const acc = this.add.graphics();
+    const acc = track(this.add.graphics());
     acc.lineStyle(2, 0x00ffcc, 0.3);
     acc.lineBetween(cx - 200, cy - 200, cx - 160, cy - 200);
     acc.lineBetween(cx - 200, cy - 200, cx - 200, cy - 160);
@@ -745,33 +744,33 @@ export abstract class GameScene extends Phaser.Scene {
     acc.lineBetween(cx - 200, cy + 200, cx - 200, cy + 160);
     acc.lineBetween(cx + 200, cy + 200, cx + 160, cy + 200);
     acc.lineBetween(cx + 200, cy + 200, cx + 200, cy + 160);
-    this.pauseContainer.add(acc);
 
-    const title = this.add
-      .text(cx, cy - 155, "PAUSED", {
-        fontSize: "42px",
-        fontFamily: "monospace",
-        color: "#00ffcc",
-        stroke: "#003322",
-        strokeThickness: 4,
-        shadow: { offsetX: 0, offsetY: 0, color: "#00ffcc", blur: 14, fill: true },
-      })
-      .setOrigin(0.5);
-    this.pauseContainer.add(title);
+    track(
+      this.add
+        .text(cx, cy - 155, "PAUSED", {
+          fontSize: "42px",
+          fontFamily: "monospace",
+          color: "#00ffcc",
+          stroke: "#003322",
+          strokeThickness: 4,
+          shadow: { offsetX: 0, offsetY: 0, color: "#00ffcc", blur: 14, fill: true },
+        })
+        .setOrigin(0.5)
+    );
 
-    const div = this.add.graphics();
+    const div = track(this.add.graphics());
     div.lineStyle(1, 0x00ffcc, 0.3);
     div.lineBetween(cx - 150, cy - 108, cx + 150, cy - 108);
-    this.pauseContainer.add(div);
 
-    this.pauseInfoText = this.add
-      .text(cx, cy - 80, `LEVEL ${this.levelNumber}`, {
-        fontSize: "16px",
-        fontFamily: "monospace",
-        color: "#446677",
-      })
-      .setOrigin(0.5);
-    this.pauseContainer.add(this.pauseInfoText);
+    this.pauseInfoText = track(
+      this.add
+        .text(cx, cy - 80, `LEVEL ${this.levelNumber}`, {
+          fontSize: "16px",
+          fontFamily: "monospace",
+          color: "#446677",
+        })
+        .setOrigin(0.5)
+    ) as Phaser.GameObjects.Text;
 
     const btnDefs = [
       { label: "▶  RESUME",        color: "#00ff88", dy: -20,  action: () => this.togglePause() },
@@ -781,23 +780,24 @@ export abstract class GameScene extends Phaser.Scene {
 
     for (const def of btnDefs) {
       const by = cy + def.dy;
-      const bg = this.add.graphics();
+      const bg = track(this.add.graphics());
       bg.fillStyle(0x001122, 0.85);
       bg.fillRoundedRect(cx - 155, by - 24, 310, 48, 8);
       bg.lineStyle(2, Phaser.Display.Color.HexStringToColor(def.color).color, 0.55);
       bg.strokeRoundedRect(cx - 155, by - 24, 310, 48, 8);
-      this.pauseContainer.add(bg);
 
-      const btn = this.add
-        .text(cx, by, def.label, {
-          fontSize: "22px",
-          fontFamily: "monospace",
-          color: def.color,
-          stroke: "#000000",
-          strokeThickness: 2,
-        })
-        .setOrigin(0.5)
-        .setInteractive({ useHandCursor: true });
+      const btn = track(
+        this.add
+          .text(cx, by, def.label, {
+            fontSize: "22px",
+            fontFamily: "monospace",
+            color: def.color,
+            stroke: "#000000",
+            strokeThickness: 2,
+          })
+          .setOrigin(0.5)
+          .setInteractive({ useHandCursor: true })
+      ) as Phaser.GameObjects.Text;
 
       btn.on("pointerover", () => {
         btn.setScale(1.07);
@@ -816,17 +816,29 @@ export abstract class GameScene extends Phaser.Scene {
         bg.strokeRoundedRect(cx - 155, by - 24, 310, 48, 8);
       });
       btn.on("pointerdown", def.action);
-      this.pauseContainer.add(btn);
     }
 
-    const hint = this.add
-      .text(cx, cy + 175, "Press ESC to resume", {
-        fontSize: "13px",
-        fontFamily: "monospace",
-        color: "#334455",
-      })
-      .setOrigin(0.5);
-    this.pauseContainer.add(hint);
+    track(
+      this.add
+        .text(cx, cy + 175, "Press ESC to resume", {
+          fontSize: "13px",
+          fontFamily: "monospace",
+          color: "#334455",
+        })
+        .setOrigin(0.5)
+    );
+  }
+
+  private setPauseVisible(visible: boolean) {
+    for (const obj of this.pauseObjects) {
+      (obj as unknown as { setVisible: (v: boolean) => void }).setVisible(visible);
+    }
+  }
+
+  private setPauseAlpha(alpha: number) {
+    for (const obj of this.pauseObjects) {
+      (obj as unknown as { alpha: number }).alpha = alpha;
+    }
   }
 
   private togglePause() {
@@ -842,21 +854,24 @@ export abstract class GameScene extends Phaser.Scene {
       this.pauseInfoText.setText(
         `LEVEL ${this.levelNumber}  •  SCORE: ${score}  •  ${diffLabel}`
       );
-      this.pauseContainer.setVisible(true);
+      this.setPauseVisible(true);
+      this.setPauseAlpha(0);
       this.tweens.add({
-        targets: this.pauseContainer,
-        alpha: { from: 0, to: 1 },
+        targets: { v: 0 },
+        v: 1,
         duration: 150,
+        onUpdate: (tween) => this.setPauseAlpha(tween.getValue() ?? 0),
       });
       soundManager.pauseOpen();
     } else {
       this.tweens.resumeAll();
       this.tweens.add({
-        targets: this.pauseContainer,
-        alpha: { from: 1, to: 0 },
+        targets: { v: 1 },
+        v: 0,
         duration: 120,
+        onUpdate: (tween) => this.setPauseAlpha(tween.getValue() ?? 0),
         onComplete: () => {
-          this.pauseContainer.setVisible(false);
+          this.setPauseVisible(false);
           this.uiManager?.resumeTimer();
           this.physics.resume();
           this.paused = false;
