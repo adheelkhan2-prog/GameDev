@@ -16,7 +16,7 @@ export class Level2Scene extends GameScene {
 
   create() {
     super.create();
-    this.addProximityHint(420, "[Q] DASH through gaps and past enemies!");
+    this.addProximityHint(420, "Complete this level to unlock the DASH ability!");
     this.addProximityHint(860, "\u26a0 PHASE SHIFTER \u2014 teleports unpredictably!");
     this.addProximityHint(2430, "\u26a0 COLLAPSE PLATFORMS \u2014 don\u2019t linger!");
   }
