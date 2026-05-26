@@ -179,10 +179,10 @@ export class LevelCompleteScene extends Phaser.Scene {
       soundManager.abilityUnlock();
       return "DASH  [Q]";
     }
-    if (level === 3 && !abilities.wallClimb) {
-      unlockAbility("wallClimb");
+    if (level === 3 && !abilities.shoot) {
+      unlockAbility("shoot");
       soundManager.abilityUnlock();
-      return "WALL CLIMB";
+      return "SHOOT  [F]";
     }
     return null;
   }
